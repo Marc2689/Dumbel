@@ -67,7 +67,7 @@ nav button span{font-size:20px}nav button.on{color:var(--acc)}
 .kv{background:var(--card);border-radius:12px;padding:10px}.kv small{display:block;color:var(--mut);font-size:12px}.kv b{font-size:18px}
 svg.chart{width:100%;height:auto;display:block}
 #dialog{position:fixed;inset:0;z-index:80;background:#000b;display:flex;align-items:center;justify-content:center;padding:22px}#dialog[hidden]{display:none}#dialog .dialog-card{width:100%;max-width:420px;background:var(--card);color:var(--txt);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 12px 40px #0008}#dialog .dialog-actions{display:flex;gap:8px;margin-top:16px}#dialog .dialog-actions button{flex:1}
-#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(130px + var(--safe));background:#000c;padding:10px 16px;border-radius:99px;z-index:50;display:none;font-size:14px}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(130px + var(--safe));background:#000c;padding:10px 16px;border-radius:99px;z-index:50;display:none;font-size:14px;width:max-content;max-width:calc(100vw - 32px);text-align:center;pointer-events:none}
 label.lb{display:block;font-size:13px;color:var(--mut);margin:12px 0 4px}
 .pr{color:#ffd23f;font-weight:600}
 .exrest{margin:0 0 6px}.exrest button{padding:4px 12px}
@@ -114,100 +114,466 @@ textarea{background:var(--card2);color:var(--txt);border:1px solid var(--line);b
 'use strict';
 /* ---------- seed exercises ---------- */
 const SEED=`# Chest
+Incline Bench Press (Smith Machine)
+Bench Press (Smith Machine)
+Bench Press - Wide Grip (Barbell)
 Bench Press (Barbell)
-Incline Bench Press (Barbell)
-Decline Bench Press (Barbell)
+Bench Press (Cable)
 Bench Press (Dumbbell)
-Incline Bench Press (Dumbbell)
-Chest Press (Machine)
+Butterfly (Pec Deck)
+Cable Fly Crossovers
+Chest Dip|reps
+Chest Dip (Assisted)
+Chest Dip (Weighted)
+Chest Fly (Band)
 Chest Fly (Dumbbell)
 Chest Fly (Machine)
-Cable Crossover
+Chest Fly (Suspension)
+Chest Press (Band)
+Chest Press (Machine)
+Clap Push Ups|reps
+Decline Bench Press (Barbell)
+Decline Bench Press (Dumbbell)
+Decline Bench Press (Machine)
+Decline Bench Press (Smith Machine)
+Decline Chest Fly (Dumbbell)
+Decline Push Up|reps
+Dumbbell Squeeze Press
+Feet Up Bench Press (Barbell)
+Floor Press (Barbell)
+Floor Press (Dumbbell)
+Hex Press (Dumbbell)
+Incline Bench Press (Barbell)
+Incline Bench Press (Dumbbell)
+Incline Chest Fly (Dumbbell)
+Incline Chest Press (Machine)
+Incline Push Ups|reps
+Iso-Lateral Chest Press (Machine)
+Kneeling Push Up|reps
+Low Cable Fly Crossovers
+One Arm Push Up|reps
+Plate Press
+Plate Squeeze (Svend Press)
 Push Up|reps
-Chest Dip|reps
+Push Up (Weighted)
+Ring Push Up|reps
+Seated Chest Flys (Cable)
+Single Arm Cable Crossover
 # Back
-Deadlift (Barbell)
-Bent Over Row (Barbell)
-Pull Up|reps
-Chin Up|reps
 Lat Pulldown (Cable)
-Seated Cable Row
-One Arm Row (Dumbbell)
-T-Bar Row
-Straight Arm Pulldown
-Back Extension|reps
+Pull Up|reps
+Landmine Row
+Seated Cable Row - V Grip (Cable)
+Bent Over Row (Barbell)
+Single Arm Cable Row
+Back Extension (Hyperextension)|reps
+Back Extension (Machine)
+Back Extension (Weighted Hyperextension)
+Bent Over Row (Band)
+Bent Over Row (Dumbbell)
+Bent Over Row (Smith Machine)
+Chest Supported Incline Row (Dumbbell)
+Chest Supported T Bar Row
+Chin Up|reps
+Chin Up (Assisted)
+Chin Up (Weighted)
+Dead Hang|time
+Deadlift (Band)
+Deadlift (Barbell)
+Deadlift (Dumbbell)
+Deadlift (Smith Machine)
+Deadlift (Trap bar)
+Deadlift High Pull
+Dumbbell Row
+Front Lever Hold|time
+Front Lever Raise|reps
+Gorilla Row (Kettlebell)
+Inverted Row|reps
+Iso-Lateral High Row (Machine)
+Iso-Lateral Low Row
+Iso-Lateral Row (Machine)
+Kipping Pull Up|reps
+Kneeling Pulldown (band)
+Lat Pulldown - Close Grip (Cable)
+Lat Pulldown (Band)
+Lat Pulldown (Machine)
+Low Row (Suspension)
+Meadows Rows (Barbell)
+Muscle Up|reps
+Negative Pull Up|reps
+Pendlay Row (Barbell)
+Pull Up (Assisted)
+Pull Up (Band)
+Pull Up (Weighted)
+Pullover (Dumbbell)
+Pullover (Machine)
+Rack Pull
+Renegade Row (Dumbbell)
+Reverse Grip Lat Pulldown (Cable)
+Ring Pull Up|reps
+Rope Straight Arm Pulldown
+Scapular Pull Ups|reps
+Seal Row (Barbell)
+Seal Row (Dumbbell)
+Seated Cable Row - Bar Grip
+Seated Cable Row - Bar Wide Grip
+Seated Row (Machine)
+Single Arm Lat Pulldown
+Straight Arm Lat Pulldown (Cable)
+Sternum Pull up (Gironda)
+Sumo Deadlift
+Superman|reps
+T Bar Row
+Vertical Traction (Machine)
+Wide Pull Up|reps
 # Shoulders
-Overhead Press (Barbell)
-Shoulder Press (Dumbbell)
-Arnold Press
-Lateral Raise (Dumbbell)
 Lateral Raise (Cable)
-Front Raise (Dumbbell)
-Rear Delt Fly (Dumbbell)
-Reverse Fly (Machine)
+Seated Shoulder Press (Machine)
+Arnold Press (Dumbbell)
+Around The World
+Band Pullaparts
+Chest Supported Reverse Fly (Dumbbell)
+Chest Supported Y Raise (Dumbbell)
 Face Pull
-Upright Row
-Shrug (Dumbbell)
+Front Raise (Band)
+Front Raise (Barbell)
+Front Raise (Cable)
+Front Raise (Dumbbell)
+Front Raise (Suspension)
+Handstand Hold|time
+Handstand Push Up|reps
+Jump Shrug
+Kettlebell Around the World
+Kettlebell Halo
+Kettlebell High Pull
+Kettlebell Shoulder Press
+Lateral Raise (Band)
+Lateral Raise (Dumbbell)
+Lateral Raise (Machine)
+Overhead Plate Raise
+Overhead Press (Barbell)
+Overhead Press (Dumbbell)
+Overhead Press (Smith Machine)
+Pike Pushup|reps
+Plate Front Raise
+Push Press
+Rear Delt Reverse Fly (Cable)
+Rear Delt Reverse Fly (Dumbbell)
+Rear Delt Reverse Fly (Machine)
+Reverse Fly Single Arm (Cable)
+Seated Lateral Raise (Dumbbell)
+Seated Overhead Press (Barbell)
+Seated Overhead Press (Dumbbell)
+Shoulder Press (Dumbbell)
+Shoulder Press (Machine Plates)
+Shoulder Taps|reps
 Shrug (Barbell)
+Shrug (Cable)
+Shrug (Dumbbell)
+Shrug (Machine)
+Shrug (Smith Machine)
+Single Arm Landmine Press (Barbell)
+Single Arm Lateral Raise (Cable)
+Standing Military Press (Barbell)
+Standing Y Raise (Cable)
+Upright Row (Barbell)
+Upright Row (Cable)
+Upright Row (Dumbbell)
 # Biceps
+Seated Incline Curl (Dumbbell)
+Preacher Curl (Barbell)
+EZ Bar Biceps Curl
+21s Bicep Curl
+Behind the Back Curl (Cable)
 Bicep Curl (Barbell)
+Bicep Curl (Cable)
 Bicep Curl (Dumbbell)
-Hammer Curl
-Preacher Curl
-Incline Curl
-Cable Curl
+Bicep Curl (Machine)
+Bicep Curl (Suspension)
 Concentration Curl
+Cross Body Hammer Curl
+Drag Curl
+Hammer Curl (Band)
+Hammer Curl (Cable)
+Hammer Curl (Dumbbell)
+Kettlebell Curl
+Overhead Curl (Cable)
+Pinwheel Curl (Dumbbell)
+Plate Curl
+Preacher Curl (Dumbbell)
+Preacher Curl (Machine)
+Reverse Curl (Barbell)
+Reverse Curl (Cable)
+Reverse Curl (Dumbbell)
+Reverse Grip Concentration Curl
+Rope Cable Curl
+Seated Incline Hammer Curl (Dumbbell)
+Single Arm Curl (Cable)
+Spider Curl (Barbell)
+Spider Curl (Dumbbell)
+Waiter Curl (Dumbbell)
+Zottman Curl (Dumbbell)
 # Triceps
-Triceps Pushdown (Cable)
-Skullcrusher (Barbell)
-Overhead Triceps Extension
-Close Grip Bench Press
-Triceps Dip|reps
+Triceps Pushdown
 Bench Dip|reps
-Triceps Kickback
+Bench Press - Close Grip (Barbell)
+Diamond Push Up|reps
+Floor Triceps Dip
+JM Press (Barbell)
+Overhead Triceps Extension (Cable)
+Push Up - Close Grip|reps
+Reverse Grip Triceps Pushdown
+Ring Dips|reps
+Seated Dip Machine
+Seated Triceps Press
+Single Arm Tricep Extension (Dumbbell)
+Single Arm Triceps Pushdown (Cable)
+Skullcrusher (Barbell)
+Skullcrusher (Dumbbell)
+Triceps Dip|reps
+Triceps Dip (Weighted)
+Triceps Extension (Barbell)
+Triceps Dip (Assisted)
+Triceps Extension (Cable)
+Triceps Extension (Dumbbell)
+Triceps Extension (Machine)
+Triceps Extension (Suspension)
+Triceps Kickback (Cable)
+Triceps Kickback (Dumbbell)
+Triceps Pressdown
+Triceps Rope Pushdown
+Wide-Elbow Triceps Press (Dumbbell)
 # Quads
-Squat (Barbell)
+Single Leg Press (Machine)
+Leg Press Horizontal (Machine)
+Assisted Pistol Squats|reps
+Belt Squat (Machine)
+Box Squat (Barbell)
+Bulgarian Split Squat (Barbell)
+Bulgarian Split Squat (Dumbbell)
+Dumbbell Step Up
 Front Squat
-Leg Press
-Leg Extension
-Hack Squat
+Full Squat|reps
 Goblet Squat
-Bulgarian Split Squat
+Hack Squat
+Hack Squat (Machine)
+Jump Squat|reps
+Jumping Lunge|reps
+Kettlebell Goblet Squat
+Landmine Squat and Press
+Lateral Lunge|reps
+Lateral Squat|reps
+Leg Extension (Machine)
+Leg Press (Machine)
+Lunge|reps
+Lunge (Barbell)
 Lunge (Dumbbell)
-Walking Lunge
-Step Up
+Overhead Dumbbell Lunge
+Overhead Squat
+Pause Squat (Barbell)
+Pendulum Squat (Machine)
+Pistol Squat|reps
+Reverse Lunge|reps
+Reverse Lunge (Barbell)
+Reverse Lunge (Dumbbell)
+Single Leg Extensions
+Sissy Squat (Weighted)
+Split Squat (Dumbbell)
+Squat (Band)
+Squat (Barbell)
+Squat (Bodyweight)|reps
+Squat (Dumbbell)
+Squat (Machine)
+Squat (Smith Machine)
+Squat (Suspension)
+Squat Row
+Step Up|reps
+Sumo Squat|reps
+Sumo Squat (Barbell)
+Sumo Squat (Dumbbell)
+Sumo Squat (Kettlebell)
+Walking Lunge|reps
+Walking Lunge (Sandbag)
+Walking Lunge (Dumbbell)
+Wall Sit|time
+Zercher Squat
 # Hamstrings
-Romanian Deadlift
-Stiff Leg Deadlift
-Lying Leg Curl
-Seated Leg Curl
-Good Morning
+Seated Leg Curl (Machine)
 Glute Ham Raise|reps
+Good Morning (Barbell)
+Lying Leg Curl (Machine)
+Nordic Hamstrings Curls|reps
+Romanian Deadlift (Dumbbell)
+Romanian Deadlift (Barbell)
+Romanian Deadlift (Smith Machine)
+Single Leg Romanian Deadlift (Barbell)
+Single Leg Romanian Deadlift (Dumbbell)
+Standing Leg Curls
+Straight Leg Deadlift
 # Glutes
-Hip Thrust (Barbell)
-Glute Bridge
-Cable Kickback
 Hip Abduction (Machine)
+Cable Pull Through
+Clamshell|reps
+Curtsy Lunge (Dumbbell)
+Fire Hydrants|reps
+Frog Pumps (Dumbbell)
+Glute Bridge|reps
+Glute Bridge (Barbell)
+Glute Kickback (Machine)
+Glute Kickback on Floor|reps
+Hip Abduction (Cable)
+Hip Adduction (Cable)
+Hip Adduction (Machine)
+Hip Thrust
+Hip Thrust (Barbell)
+Hip Thrust (Dumbbell)
+Hip Thrust (Smith Machine)
+Hip Thrust (Machine)
+Kettlebell Swing
+Lateral Band Walks
+Lateral Leg Raises|reps
+Partial Glute Bridge (Barbell)
+Rear Kick (Machine)
+Reverse Hyperextension
+Single Leg Glute Bridge|reps
+Single Leg Hip Thrust|reps
+Single Leg Hip Thrust (Dumbbell)
+Standing Cable Glute Kickbacks
 # Calves
-Standing Calf Raise
+Calf Extension (Machine)
+Calf Press (Machine)
 Seated Calf Raise
-Calf Press
+Single Leg Standing Calf Raise|reps
+Single Leg Standing Calf Raise (Barbell)
+Single Leg Standing Calf Raise (Dumbbell)
+Single Leg Standing Calf Raise (Machine)
+Standing Calf Raise|reps
+Standing Calf Raise (Barbell)
+Standing Calf Raise (Dumbbell)
+Standing Calf Raise (Machine)
+Standing Calf Raise (Smith)
 # Core
-Plank|time
-Side Plank|time
-Crunch|reps
-Sit Up|reps
-Hanging Leg Raise|reps
+Leg Raise Parallel Bars|reps
+Crunch (Machine)
+Ab Scissors|reps
+Ab Wheel|reps
+Bear Crawl|time
+Bicycle Crunch Raised Legs|reps
+Bicycle Crunch|reps
+Bird Dog|time
+Cable Core Pallof Press
 Cable Crunch
-Russian Twist|reps
-Ab Wheel Rollout|reps
+Cable Twist (Down to up)
+Cable Twist (Up to down)
+Crunch|reps
+Crunch (Weighted)
+Dead Bug|reps
+Decline Crunch|reps
+Decline Crunch (Weighted)
+Downward Dog|time
+Dragon Flag|reps
+Dragonfly|reps
+Elbow to Knee|reps
+Flutter Kicks|reps
+Hanging Knee Raise|reps
+Hanging Leg Raise|reps
+Heel Taps|reps
+Hollow Rock|time
+Jack Knife (Suspension)
+Jackknife Sit Up|reps
+Knee Raise Parallel Bars|reps
+L-Sit Hold|time
+Landmine 180
+Lying Knee Raise|reps
+Lying Leg Raise|reps
+Mountain Climber|reps
+Oblique Crunch|reps
+Plank|time
+Plank Pushup|reps
+Reverse Crunch|reps
+Reverse Plank|time
+Russian Twist (Bodyweight)|reps
+Russian Twist (Weighted)
+Side Bend (Dumbbell)
+Side Bend
+Side Plank|time
+Sit Up|reps
+Sit Up (Weighted)
+Spiderman|reps
+Toe Touch|reps
+Toes to Bar|reps
+Torso Rotation
+V Up|reps
 # Cardio
-Running|time
-Walking|time
+Aerobics|time
+Air Bike|time
+Battle Ropes|time
+Box Jump|reps
+Boxing|time
+Burpee|reps
+Burpee Broad Jumps|reps
+Burpee Over the Bar|reps
 Cycling|time
+Elliptical Trainer|time
+Frog Jumps|reps
+High Knee Skips|reps
+High Knees|reps
+HIIT|time
+Hiking|time
+Jump Rope|time
+Jumping Jack|reps
+Lateral Box Jump|reps
+Pilates|time
+Recumbent Bike|time
 Rowing Machine|time
-Stair Climber|time
-Jump Rope|time`;
+Running|time
+Skating|time
+Ski Erg|time
+Skiing|time
+Spinning|time
+Sprints|time
+Stair Machine (Steps)|time
+Stair Machine (Floors)|time
+Stretching|time
+Swimming|time
+Treadmill|time
+Walking|time
+Warm Up|time
+Yoga|time
+# Other
+Ball Slams
+Behind the Back Wrist Curl (Barbell)
+Clean
+Clean and Jerk
+Clean and Press
+Clean Pull
+Dumbbell Snatch
+Farmers Walk
+Hang Clean
+Hang Snatch
+Kettlebell Clean
+Kettlebell Snatch
+Kettlebell Turkish Get Up
+Lying Neck Curls|reps
+Lying Neck Curls (Weighted)
+Lying Neck Extension (Weighted)
+Lying Neck Extension|reps
+Power Clean
+Power Snatch
+Press Under
+Reverse Wrist Curl (Dumbbell)
+Seated Palms Up Wrist Curl
+Seated Wrist Curl (Barbell)
+Seated Wrist Extension (Barbell)
+Sled Pull
+Sled Push
+Snatch
+Split Jerk
+Suitcase Carry (Dumbbell)
+Thruster (Barbell)
+Thruster (Kettlebell)
+Wall Ball
+Wrist Roller`;
 const MUSCLES=['Chest','Back','Shoulders','Biceps','Triceps','Quads','Hamstrings','Glutes','Calves','Core','Cardio','Other'];
 const TYPES={wr:'Weight & reps',reps:'Bodyweight reps',time:'Duration (sec)'};
 const slug=s=>s.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
@@ -292,7 +658,7 @@ Sit back with your chest up and grip the handles with a slight elbow bend.
 Bring the handles together in front of you and squeeze.
 Return slowly to a comfortable stretch.
 ! Pause for a second at the squeeze for a better contraction.
-@Cable Crossover
+@Cable Fly Crossovers
 Set the pulleys high and stand in a split stance holding a handle in each hand.
 Lean slightly forward with a slight elbow bend.
 Sweep your hands down and together in front of your hips.
@@ -338,31 +704,31 @@ Lean back a few degrees with your chest up.
 Pull the bar to your upper chest, driving your elbows down.
 Let the bar rise slowly until your arms are straight.
 ! Don't swing your torso or pull the bar behind your neck.
-@Seated Cable Row
+@Seated Cable Row - Bar Grip
 Sit with your feet on the plates and knees slightly bent, holding the handle with arms extended.
 Sit tall with your chest up.
 Pull the handle to your lower stomach, squeezing your shoulder blades together.
 Return slowly, letting your shoulders stretch forward slightly.
 ! Keep your torso mostly still; don't rock back to move the weight.
-@One Arm Row (Dumbbell)
+@Dumbbell Row
 Place one knee and the same-side hand on a bench, other foot on the floor.
 Hold a dumbbell with your free hand, arm hanging straight.
 Row the dumbbell toward your hip, keeping your elbow close to your body.
 Lower slowly to a full stretch.
 ! Keep your back flat and hips square — don't twist as you pull.
-@T-Bar Row
+@T Bar Row
 Straddle the bar, hinge forward with a flat back and grab the handle.
 Pull the weight toward your chest, driving your elbows back.
 Squeeze your shoulder blades together at the top.
 Lower under control.
 ! Keep your head neutral — look at the floor a little ahead of you.
-@Straight Arm Pulldown
+@Straight Arm Lat Pulldown (Cable)
 Stand facing a high cable with a bar or rope, arms straight, slight hinge at the hips.
 Keeping your arms nearly straight, sweep the bar down to your thighs.
 Pause and feel your lats squeeze.
 Return slowly overhead.
 ! Move from your shoulders, not your elbows.
-@Back Extension
+@Back Extension (Hyperextension)
 Set the pad at hip level on a back extension bench with feet secured.
 Cross your arms and keep your body straight from head to heels.
 Lower your torso by hinging at the hips.
@@ -379,7 +745,7 @@ Sit or stand with the dumbbells at shoulder height, palms facing forward.
 Press up until your arms are straight above you.
 Lower back to ear level under control.
 ! Keep your core tight so your lower back doesn't arch.
-@Arnold Press
+@Arnold Press (Dumbbell)
 Start with dumbbells in front of your shoulders, palms facing you.
 Press up while rotating your palms to face forward.
 Finish with arms straight overhead.
@@ -400,13 +766,13 @@ Stand holding dumbbells in front of your thighs.
 Raise one or both arms straight in front of you to shoulder height.
 Lower under control.
 ! Don't swing your body — if you need to, the weight is too heavy.
-@Rear Delt Fly (Dumbbell)
+@Rear Delt Reverse Fly (Dumbbell)
 Hinge forward at the hips with a flat back, dumbbells hanging below your chest.
 With a slight elbow bend, raise your arms out to the sides.
 Squeeze your shoulder blades together at the top.
 Lower slowly.
 ! Use light weights — the rear delts are small.
-@Reverse Fly (Machine)
+@Rear Delt Reverse Fly (Machine)
 Sit facing the pad with your chest against it and grab the handles.
 Pull the handles out and back in a wide arc, keeping your arms almost straight.
 Squeeze your shoulder blades together.
@@ -418,7 +784,7 @@ Pull the rope toward your face, splitting the ends apart by your ears.
 Squeeze your shoulder blades together and hold briefly.
 Return slowly.
 ! Great for shoulder health. Use light weight and high reps.
-@Upright Row
+@Upright Row (Barbell)
 Hold a bar or dumbbells in front of your thighs with a shoulder-width grip.
 Pull straight up along your body, leading with your elbows.
 Stop around chest height.
@@ -444,22 +810,22 @@ Stand with a dumbbell in each hand, palms facing forward.
 Curl the weights up while keeping your elbows by your sides.
 Squeeze at the top and lower slowly.
 ! Alternate arms or do both together — either works.
-@Hammer Curl
+@Hammer Curl (Dumbbell)
 Hold dumbbells with palms facing each other.
 Curl up without rotating your wrists, elbows tucked in.
 Lower slowly.
 ! Hits the brachialis and forearms as well as the biceps.
-@Preacher Curl
+@Preacher Curl (Barbell)
 Sit at a preacher bench with your upper arms resting flat on the pad.
 Curl the bar or dumbbells up toward your shoulders.
 Lower slowly until your arms are almost straight.
 ! Don't fully lock out at the bottom with heavy weight — that stresses the elbow.
-@Incline Curl
+@Seated Incline Curl (Dumbbell)
 Sit back on an incline bench (about 60°) with dumbbells hanging at your sides.
 Curl up without moving your upper arms forward.
 Lower slowly to a full stretch.
 ! The stretched position at the bottom is where this exercise shines.
-@Cable Curl
+@Bicep Curl (Cable)
 Stand facing a low cable with a bar or rope attachment.
 Curl the handle up, keeping your elbows by your sides.
 Squeeze at the top and lower slowly.
@@ -469,7 +835,7 @@ Sit on a bench with your elbow braced against your inner thigh.
 Curl the dumbbell up toward your shoulder.
 Squeeze, then lower under control.
 ! Slow and strict — don't lean back to help.
-@Triceps Pushdown (Cable)
+@Triceps Pushdown
 Stand facing a high cable with a bar or rope, elbows pinned to your sides.
 Push down until your arms are fully straight.
 Return until your forearms are just past parallel with the floor.
@@ -479,12 +845,12 @@ Lie on a bench holding a bar (or EZ-bar) above your chest with straight arms.
 Bend only your elbows to lower the bar toward your forehead or just behind your head.
 Extend your arms back up.
 ! Keep your upper arms vertical and still. Use a spotter for heavier weights.
-@Overhead Triceps Extension
+@Overhead Triceps Extension (Cable)
 Hold a dumbbell or cable handle overhead with both hands, elbows pointing forward.
 Lower the weight behind your head by bending your elbows.
 Extend back up until your arms are straight.
 ! Keep your elbows close to your ears and your core tight.
-@Close Grip Bench Press
+@Bench Press - Close Grip (Barbell)
 Lie on a bench and grip the bar about shoulder-width apart.
 Lower the bar to your lower chest with your elbows tucked close.
 Press up until your arms are straight.
@@ -499,7 +865,7 @@ Sit on the edge of a bench with hands beside your hips, then slide your hips off
 Lower your body by bending your elbows to about 90°.
 Press back up to straight arms.
 ! Keep your hips close to the bench. Bend your knees to make it easier.
-@Triceps Kickback
+@Triceps Kickback (Dumbbell)
 Hinge forward with a flat back and your upper arm parallel to the floor, holding a dumbbell.
 Extend your elbow to straighten your arm behind you.
 Squeeze, then bring it back slowly.
@@ -515,12 +881,12 @@ Rest the bar on your front shoulders, elbows high, upper arms parallel to the fl
 Squat down while keeping your torso as upright as possible.
 Drive up through your feet to stand.
 ! If the elbows drop, the bar rolls forward — keep them high.
-@Leg Press
+@Leg Press (Machine)
 Sit in the machine with your feet shoulder-width apart in the middle of the platform.
 Release the safety and lower the platform until your knees are about 90°.
 Press back up without locking your knees.
 ! Keep your lower back and hips flat against the seat the whole time.
-@Leg Extension
+@Leg Extension (Machine)
 Sit in the machine with the pad on your lower shins and knees lined up with the pivot.
 Extend your legs until they are straight.
 Squeeze your quads, then lower slowly.
@@ -535,7 +901,7 @@ Hold a dumbbell or kettlebell against your chest with both hands.
 Squat down between your knees, keeping your chest up.
 Stand back up by driving through your feet.
 ! A great way to learn the squat pattern. Use your elbows to push your knees out.
-@Bulgarian Split Squat
+@Bulgarian Split Squat (Dumbbell)
 Stand a stride in front of a bench and rest the top of your back foot on it.
 Lower straight down until your front thigh is parallel to the floor.
 Drive through your front heel to stand.
@@ -555,28 +921,28 @@ Stand facing a bench or box with a dumbbell in each hand if desired.
 Place one foot fully on the box and drive through it to stand on top.
 Step back down under control and repeat.
 ! Don't push off the back foot — let the lead leg do the work.
-@Romanian Deadlift
+@Romanian Deadlift (Barbell)
 Stand holding a bar or dumbbells in front of your thighs with a slight knee bend.
 Push your hips straight back, keeping the weight close to your legs.
 Lower until you feel a strong hamstring stretch, usually just below the knees.
 Drive your hips forward to stand tall.
 ! Keep your back flat — this is a hip hinge, not a squat.
-@Stiff Leg Deadlift
+@Straight Leg Deadlift
 Stand holding a bar with your legs almost straight.
 Hinge at the hips and lower the bar down your legs.
 Stand back up by squeezing your glutes.
 ! Stop when your lower back wants to round, even if the bar hasn't reached the floor.
-@Lying Leg Curl
+@Lying Leg Curl (Machine)
 Lie face down on the machine with the pad just above your heels.
 Curl your heels toward your glutes.
 Squeeze, then lower slowly.
 ! Keep your hips pressed into the bench.
-@Seated Leg Curl
+@Seated Leg Curl (Machine)
 Sit in the machine with the pad on the back of your lower legs, thighs secured.
 Curl your heels down and back as far as you can.
 Return slowly to the start.
 ! Keep your back against the pad and avoid jerking the weight.
-@Good Morning
+@Good Morning (Barbell)
 Place a light barbell on your upper back, feet shoulder-width apart, knees slightly bent.
 Hinge at the hips, pushing them back until your torso is almost parallel to the floor.
 Squeeze your glutes to return to standing.
@@ -597,7 +963,7 @@ Lie on your back with knees bent and feet flat on the floor.
 Drive through your heels to lift your hips until your body forms a straight line.
 Squeeze your glutes at the top, then lower.
 ! Add a barbell or dumbbell on your hips once bodyweight feels easy.
-@Cable Kickback
+@Standing Cable Glute Kickbacks
 Attach an ankle strap to a low cable and face the machine, holding it for support.
 Kick your working leg straight back, squeezing your glute.
 Return slowly without letting the weight stack touch down.
@@ -617,7 +983,7 @@ Sit with your knees under the pad and the balls of your feet on the platform.
 Lower your heels for a stretch.
 Press up onto your toes and squeeze.
 ! The bent knee targets the soleus, so use higher reps.
-@Calf Press
+@Calf Press (Machine)
 Sit in the leg press and place the balls of your feet on the bottom of the platform.
 Press with your toes to extend your ankles.
 Lower your heels for a full stretch and repeat.
@@ -653,12 +1019,12 @@ Kneel under a high cable with a rope behind your head.
 Crunch down, bringing your elbows toward your thighs while rounding your spine.
 Return slowly.
 ! Move your spine, not your hips — keep your hips still.
-@Russian Twist
+@Russian Twist (Bodyweight)
 Sit with knees bent, lean back slightly, and lift your feet if you can.
 Rotate your torso to one side, then the other.
 Hold a weight to make it harder.
 ! Turn from your ribcage, not just your arms.
-@Ab Wheel Rollout
+@Ab Wheel
 Kneel on a mat holding the wheel under your shoulders.
 Roll out slowly while keeping your abs tight and back flat.
 Roll back to the start by pulling with your abs.
@@ -683,7 +1049,7 @@ Start with your legs bent, arms straight, and shins vertical.
 Push through your legs first, then lean back slightly, and finally pull the handle to your lower ribs.
 Reverse the order to return: arms, then body, then knees.
 ! About 60% of the power comes from your legs.
-@Stair Climber
+@Stair Machine (Steps)
 Stand tall and step steadily, placing your whole foot on each step.
 Use the handrails only for balance, not to hold your weight.
 ! Leaning on the rails reduces the work you're doing.
@@ -698,18 +1064,18 @@ const INFO={};(function(){let c=null;INFOTXT.split('\n').forEach(l=>{l=l.trim();
 
 /* ---------- preset workouts: [exercise name, sets, target] ---------- */
 const PRESETS=[
-{id:'p_push',name:'Push Day',desc:'Chest, shoulders & triceps',items:[['Bench Press (Barbell)',4,'6–10 reps'],['Incline Bench Press (Dumbbell)',3,'8–12 reps'],['Shoulder Press (Dumbbell)',3,'8–12 reps'],['Lateral Raise (Dumbbell)',3,'12–15 reps'],['Triceps Pushdown (Cable)',3,'10–15 reps'],['Overhead Triceps Extension',3,'10–15 reps']]},
-{id:'p_pull',name:'Pull Day',desc:'Back & biceps',items:[['Lat Pulldown (Cable)',4,'8–12 reps'],['Bent Over Row (Barbell)',4,'6–10 reps'],['Seated Cable Row',3,'10–12 reps'],['Face Pull',3,'12–15 reps'],['Bicep Curl (Barbell)',3,'8–12 reps'],['Hammer Curl',3,'10–12 reps']]},
-{id:'p_legs',name:'Leg Day',desc:'Quads, hamstrings, glutes & calves',items:[['Squat (Barbell)',4,'6–10 reps'],['Romanian Deadlift',3,'8–10 reps'],['Leg Press',3,'10–12 reps'],['Lying Leg Curl',3,'10–12 reps'],['Leg Extension',3,'12–15 reps'],['Standing Calf Raise',4,'12–15 reps']]},
-{id:'p_upper',name:'Upper Body',desc:'Chest, back, shoulders & arms',items:[['Bench Press (Barbell)',3,'6–10 reps'],['Bent Over Row (Barbell)',3,'6–10 reps'],['Overhead Press (Barbell)',3,'8–10 reps'],['Lat Pulldown (Cable)',3,'8–12 reps'],['Bicep Curl (Dumbbell)',2,'10–12 reps'],['Triceps Pushdown (Cable)',2,'10–12 reps']]},
-{id:'p_lower',name:'Lower Body',desc:'Legs, glutes & core',items:[['Deadlift (Barbell)',3,'5 reps'],['Bulgarian Split Squat',3,'8–10 reps'],['Hip Thrust (Barbell)',3,'8–12 reps'],['Seated Leg Curl',3,'10–12 reps'],['Seated Calf Raise',3,'12–15 reps'],['Plank',3,'45–60 sec']]},
-{id:'p_fb_a',name:'Full Body A',desc:'Beginner-friendly, 3 days a week',items:[['Squat (Barbell)',3,'8–10 reps'],['Bench Press (Dumbbell)',3,'8–10 reps'],['Seated Cable Row',3,'8–12 reps'],['Shoulder Press (Dumbbell)',2,'10–12 reps'],['Plank',3,'30–45 sec']]},
-{id:'p_fb_b',name:'Full Body B',desc:'Alternate with Full Body A',items:[['Romanian Deadlift',3,'8–10 reps'],['Incline Bench Press (Dumbbell)',3,'8–12 reps'],['Lat Pulldown (Cable)',3,'8–12 reps'],['Goblet Squat',3,'10–12 reps'],['Lateral Raise (Dumbbell)',2,'12–15 reps'],['Crunch',3,'12–15 reps']]},
+{id:'p_push',name:'Push Day',desc:'Chest, shoulders & triceps',items:[['Bench Press (Barbell)',4,'6–10 reps'],['Incline Bench Press (Dumbbell)',3,'8–12 reps'],['Shoulder Press (Dumbbell)',3,'8–12 reps'],['Lateral Raise (Dumbbell)',3,'12–15 reps'],['Triceps Pushdown',3,'10–15 reps'],['Overhead Triceps Extension (Cable)',3,'10–15 reps']]},
+{id:'p_pull',name:'Pull Day',desc:'Back & biceps',items:[['Lat Pulldown (Cable)',4,'8–12 reps'],['Bent Over Row (Barbell)',4,'6–10 reps'],['Seated Cable Row - Bar Grip',3,'10–12 reps'],['Face Pull',3,'12–15 reps'],['Bicep Curl (Barbell)',3,'8–12 reps'],['Hammer Curl (Dumbbell)',3,'10–12 reps']]},
+{id:'p_legs',name:'Leg Day',desc:'Quads, hamstrings, glutes & calves',items:[['Squat (Barbell)',4,'6–10 reps'],['Romanian Deadlift (Barbell)',3,'8–10 reps'],['Leg Press (Machine)',3,'10–12 reps'],['Lying Leg Curl (Machine)',3,'10–12 reps'],['Leg Extension (Machine)',3,'12–15 reps'],['Standing Calf Raise',4,'12–15 reps']]},
+{id:'p_upper',name:'Upper Body',desc:'Chest, back, shoulders & arms',items:[['Bench Press (Barbell)',3,'6–10 reps'],['Bent Over Row (Barbell)',3,'6–10 reps'],['Overhead Press (Barbell)',3,'8–10 reps'],['Lat Pulldown (Cable)',3,'8–12 reps'],['Bicep Curl (Dumbbell)',2,'10–12 reps'],['Triceps Pushdown',2,'10–12 reps']]},
+{id:'p_lower',name:'Lower Body',desc:'Legs, glutes & core',items:[['Deadlift (Barbell)',3,'5 reps'],['Bulgarian Split Squat (Dumbbell)',3,'8–10 reps'],['Hip Thrust (Barbell)',3,'8–12 reps'],['Seated Leg Curl (Machine)',3,'10–12 reps'],['Seated Calf Raise',3,'12–15 reps'],['Plank',3,'45–60 sec']]},
+{id:'p_fb_a',name:'Full Body A',desc:'Beginner-friendly, 3 days a week',items:[['Squat (Barbell)',3,'8–10 reps'],['Bench Press (Dumbbell)',3,'8–10 reps'],['Seated Cable Row - Bar Grip',3,'8–12 reps'],['Shoulder Press (Dumbbell)',2,'10–12 reps'],['Plank',3,'30–45 sec']]},
+{id:'p_fb_b',name:'Full Body B',desc:'Alternate with Full Body A',items:[['Romanian Deadlift (Barbell)',3,'8–10 reps'],['Incline Bench Press (Dumbbell)',3,'8–12 reps'],['Lat Pulldown (Cable)',3,'8–12 reps'],['Goblet Squat',3,'10–12 reps'],['Lateral Raise (Dumbbell)',2,'12–15 reps'],['Crunch',3,'12–15 reps']]},
 {id:'p_55a',name:'Strength 5×5 – A',desc:'Heavy compound lifts, alternate with B',items:[['Squat (Barbell)',5,'5 reps'],['Bench Press (Barbell)',5,'5 reps'],['Bent Over Row (Barbell)',5,'5 reps']]},
 {id:'p_55b',name:'Strength 5×5 – B',desc:'Heavy compound lifts, alternate with A',items:[['Squat (Barbell)',5,'5 reps'],['Overhead Press (Barbell)',5,'5 reps'],['Deadlift (Barbell)',1,'5 reps']]},
-{id:'p_arms',name:'Arm Day',desc:'Biceps & triceps',items:[['Close Grip Bench Press',3,'8–10 reps'],['Bicep Curl (Barbell)',3,'8–12 reps'],['Skullcrusher (Barbell)',3,'10–12 reps'],['Incline Curl',3,'10–12 reps'],['Triceps Pushdown (Cable)',3,'12–15 reps'],['Hammer Curl',3,'10–12 reps']]},
-{id:'p_core',name:'Core Blast',desc:'Abs & obliques',items:[['Plank',3,'45–60 sec'],['Hanging Leg Raise',3,'8–12 reps'],['Cable Crunch',3,'12–15 reps'],['Russian Twist',3,'20 reps'],['Ab Wheel Rollout',3,'8–10 reps'],['Side Plank',2,'30 sec each side']]},
-{id:'p_home',name:'Bodyweight at Home',desc:'No equipment needed',items:[['Push Up',4,'max reps'],['Bench Dip',3,'10–15 reps'],['Back Extension',3,'12–15 reps'],['Crunch',3,'15–20 reps'],['Plank',3,'30–60 sec'],['Side Plank',2,'30 sec each side']]}
+{id:'p_arms',name:'Arm Day',desc:'Biceps & triceps',items:[['Bench Press - Close Grip (Barbell)',3,'8–10 reps'],['Bicep Curl (Barbell)',3,'8–12 reps'],['Skullcrusher (Barbell)',3,'10–12 reps'],['Seated Incline Curl (Dumbbell)',3,'10–12 reps'],['Triceps Pushdown',3,'12–15 reps'],['Hammer Curl (Dumbbell)',3,'10–12 reps']]},
+{id:'p_core',name:'Core Blast',desc:'Abs & obliques',items:[['Plank',3,'45–60 sec'],['Hanging Leg Raise',3,'8–12 reps'],['Cable Crunch',3,'12–15 reps'],['Russian Twist (Bodyweight)',3,'20 reps'],['Ab Wheel',3,'8–10 reps'],['Side Plank',2,'30 sec each side']]},
+{id:'p_home',name:'Bodyweight at Home',desc:'No equipment needed',items:[['Push Up',4,'max reps'],['Bench Dip',3,'10–15 reps'],['Back Extension (Hyperextension)',3,'12–15 reps'],['Crunch',3,'15–20 reps'],['Plank',3,'30–60 sec'],['Side Plank',2,'30 sec each side']]}
 ];
 /* resolve to exercise ids and drop any exercise missing from a user's library */
 function presetItems(p){return p.items.map(([n,s,t])=>({exId:'s_'+slug(n),sets:s,target:t})).filter(i=>S.exercises.some(e=>e.id===i.exId))}
@@ -944,8 +1310,33 @@ function exEditor(id,fromPicker){
   <label class="lb">Muscle group</label><select data-f="exmuscle">${MUSCLES.map(m=>`<option ${m===e.muscle?'selected':''}>${m}</option>`).join('')}</select>
   <label class="lb">Type</label><select data-f="extype">${Object.entries(TYPES).map(([k,v])=>`<option value="${k}" ${k===e.type?'selected':''}>${v}</option>`).join('')}</select>
   <button class="btn big" data-act="saveEx">Save</button>`,fromPicker?2:1)}
-function howTo(ex){const i=!ex.custom&&INFO[ex.name];if(!i)return '';
-  return `<h2>How to do it</h2><div class="card"><ol class="how">${i.steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ol>${i.tip?`<div class="tip">💡 ${esc(i.tip)}</div>`:''}</div>`}
+const MUSCLE_INFO={
+ Chest:['Pectorals (chest)','Front delts and triceps assist on pressing moves.'],
+ Back:['Lats, rhomboids, traps and lower back','Biceps and rear delts assist on pulling moves.'],
+ Shoulders:['Front, side and rear deltoids, plus traps','Triceps assist on presses; rotator cuff stabilises.'],
+ Biceps:['Biceps brachii and brachialis','Forearms assist with grip.'],
+ Triceps:['All three heads of the triceps','Extends the elbow; assists every pressing move.'],
+ Quads:['Quadriceps (front of thigh)','Extend the knee; glutes and core assist on squats and lunges.'],
+ Hamstrings:['Hamstrings (back of thigh)','Bend the knee and extend the hip; glutes and lower back assist.'],
+ Glutes:['Gluteus maximus, medius and minimus','Extend and abduct the hip; hamstrings assist.'],
+ Calves:['Gastrocnemius and soleus','Point the foot; important for walking, running and jumping.'],
+ Core:['Abs, obliques and deep stabilisers','Brace the trunk and protect the lower back.'],
+ Cardio:['Heart, lungs and legs','Builds conditioning and endurance.'],
+ Other:['Full body, grip or specialty','Works several areas at once, or smaller muscles like forearms and neck.']};
+const baseName=n=>n.replace(/\s*\(.*?\)\s*/g,' ').replace(/\s+-\s+.*$/,'').trim().toLowerCase();
+let INFO_BASE=null;
+function infoFor(ex){
+  if(ex.custom)return null;
+  if(INFO[ex.name])return {i:INFO[ex.name]};
+  if(!INFO_BASE){INFO_BASE={};Object.keys(INFO).forEach(k=>{const b=baseName(k);if(!INFO_BASE[b])INFO_BASE[b]=k})}
+  const k=INFO_BASE[baseName(ex.name)];
+  return k?{i:INFO[k],from:k}:null}
+function howTo(ex){
+  const m=MUSCLE_INFO[ex.muscle],mc=m?`<h2>Muscle group</h2><div class="card"><b>${esc(ex.muscle)}</b> — ${esc(m[0])}<div class="muted sm" style="margin-top:4px">${esc(m[1])}</div></div>`:'';
+  const f=infoFor(ex);
+  if(!f)return mc+(ex.custom?'':'<h2>How to do it</h2><div class="card muted sm">No step-by-step guide for this exercise yet.</div>');
+  const i=f.i;
+  return mc+`<h2>How to do it</h2><div class="card">${f.from?`<div class="muted sm" style="margin-bottom:6px">General guide based on “${esc(f.from)}” — adjust for the equipment you’re using.</div>`:''}<ol class="how">${i.steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ol>${i.tip?`<div class="tip">💡 ${esc(i.tip)}</div>`:''}</div>`}
 function exDetail(id){
   const ex=exById(id),h=exHistory(id);
   let rec='';
@@ -992,6 +1383,24 @@ function updateRest(){
 setInterval(()=>{updateRest();const el=$('#elapsed');if(el&&S.active)el.textContent=fmtDur(Date.now()-S.active.start)},1000);
 async function keepAwake(){try{if(S.active&&navigator.wakeLock)await navigator.wakeLock.request('screen')}catch(e){}}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)keepAwake()});
+
+/* ---------- Android back button: never exits the app; closes the top-most dialog/sheet, else returns to Workout ---------- */
+(function(){
+ let armed=false;
+ const guard=()=>{try{history.pushState({dumbel:1},'')}catch(e){}armed=true};
+ try{history.replaceState({dumbel:0},'')}catch(e){}
+ guard();
+ /* browsers ignore history entries added without a tap, so add another on the first tap after each back press */
+ addEventListener('pointerdown',()=>{if(!armed)guard()},true);
+ addEventListener('popstate',()=>{
+  armed=false;guard();
+  const dlg=$('#dialog');
+  if(dlg&&!dlg.hidden){const c=$('#dialogCancel');if(c)c.click();return}
+  if($('#sheet2').classList.contains('on')){$('#sheet2 .back').click();return}
+  if($('#sheet').classList.contains('on')){$('#sheet .back').click();return}
+  if(ui.tab!=='workout'){ui.tab='workout';render();window.scrollTo(0,0)}
+ });
+})();
 
 /* ---------- actions ---------- */
 function startWorkout(items,name){S.active={id:uid(),name:name||workoutName(),note:'',start:Date.now(),items,restEnd:null};save();ui.tab='workout';sheet('');render();keepAwake();window.scrollTo(0,0)}
