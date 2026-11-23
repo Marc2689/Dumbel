@@ -70,6 +70,7 @@ svg.chart{width:100%;height:auto;display:block}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(130px + var(--safe));background:#000c;padding:10px 16px;border-radius:99px;z-index:50;display:none;font-size:14px}
 label.lb{display:block;font-size:13px;color:var(--mut);margin:12px 0 4px}
 .pr{color:#ffd23f;font-weight:600}
+.plink{cursor:pointer;text-decoration:underline;text-decoration-color:var(--acc);text-underline-offset:3px}
 .exrest{margin:0 0 6px}.exrest button{padding:4px 12px}
 .animal{text-align:center;background:var(--card);border-radius:14px;padding:14px;margin:12px 0}.animal .big{font-size:76px;line-height:1.15}
 .how{margin:0;padding-left:20px}.how li{margin:6px 0}
@@ -1157,14 +1158,28 @@ function lineChart(pts,fmt){
   if(y0===y1){y0=y0*.9;y1=y1*1.1+1}
   const X=x=>L+(x-x0)/(x1-x0)*(W-L-R),Y=y=>H-B-(y-y0)/(y1-y0)*(H-T-B);
   const path=pts.map((p,i)=>(i?'L':'M')+X(p.x).toFixed(1)+' '+Y(p.y).toFixed(1)).join('');
+  /* month ticks along the x-axis: step 1/2/3/6/12 months so there are never more than ~6 labels */
+  const mStart=new Date(x0);mStart.setHours(0,0,0,0);mStart.setDate(1);
+  const all=[];for(let d=new Date(mStart);d.getTime()<=x1;d.setMonth(d.getMonth()+1)){if(d.getTime()>=x0)all.push(new Date(d))}
+  const step=[1,2,3,6,12].find(s=>Math.ceil(all.length/s)<=6)||12;
+  const ticks=all.filter((d,i)=>i%step===0);
+  let xaxis;
+  if(ticks.length<2){
+    xaxis=`<text x="${L}" y="${H-6}" font-size="10" fill="var(--mut)">${fmtDateY(pts[0].x)}</text>
+    <text x="${W-R}" y="${H-6}" text-anchor="end" font-size="10" fill="var(--mut)">${fmtDateY(pts[pts.length-1].x)}</text>`;
+  }else{
+    xaxis=ticks.map((d,i)=>{const x=X(d.getTime()),yr=d.getMonth()===0||i===0,anc=x<L+14?'start':x>W-R-14?'end':'middle';
+      return `<line x1="${x.toFixed(1)}" y1="${T}" x2="${x.toFixed(1)}" y2="${H-B}" stroke="var(--line)" stroke-dasharray="2 3"/>
+      <text x="${x.toFixed(1)}" y="${H-6}" text-anchor="${anc}" font-size="10" fill="var(--mut)">${d.toLocaleDateString(undefined,{month:'short'})}${yr?" '"+String(d.getFullYear()).slice(2):''}</text>`}).join('');
+  }
   return `<svg class="chart" viewBox="0 0 ${W} ${H}">
+  ${ticks.length<2?'':xaxis}
   <line x1="${L}" y1="${Y(y0)}" x2="${W-R}" y2="${Y(y0)}" stroke="var(--line)"/><line x1="${L}" y1="${Y(y1)}" x2="${W-R}" y2="${Y(y1)}" stroke="var(--line)"/>
   <text x="${L-4}" y="${Y(y1)+4}" text-anchor="end" font-size="10" fill="var(--mut)">${fmt(y1)}</text>
   <text x="${L-4}" y="${Y(y0)+4}" text-anchor="end" font-size="10" fill="var(--mut)">${fmt(y0)}</text>
   <path d="${path}" fill="none" stroke="var(--acc)" stroke-width="2.5" stroke-linejoin="round"/>
   ${pts.map(p=>`<circle cx="${X(p.x).toFixed(1)}" cy="${Y(p.y).toFixed(1)}" r="3.5" fill="var(--acc)"/>`).join('')}
-  <text x="${L}" y="${H-6}" font-size="10" fill="var(--mut)">${fmtDateY(pts[0].x)}</text>
-  <text x="${W-R}" y="${H-6}" text-anchor="end" font-size="10" fill="var(--mut)">${fmtDateY(pts[pts.length-1].x)}</text></svg>`}
+  ${ticks.length<2?xaxis:''}</svg>`}
 function barChart(vals,labels){
   const W=320,H=140,L=10,R=10,T=16,B=22,max=Math.max(1,...vals),bw=(W-L-R)/vals.length;
   return `<svg class="chart" viewBox="0 0 ${W} ${H}">${vals.map((v,i)=>{const h=(H-T-B)*v/max,x=L+i*bw+bw*.15;
@@ -1283,13 +1298,13 @@ function vStats(){
   const ws=S.workouts,now=Date.now(),cur=weekStart(now),wk=ws.filter(w=>w.start>=cur);
   const vals=[],labs=[];for(let i=7;i>=0;i--){const a=cur-i*6048e5,b=a+6048e5;vals.push(ws.filter(w=>w.start>=a&&w.start<b).length);const d=new Date(a);labs.push(`${d.getDate()}/${d.getMonth()+1}`)}
   const withHist=statExList();if(!ui.statEx||!withHist.find(e=>e.id===ui.statEx))ui.statEx=withHist[0]?withHist[0].id:'';
-  const prs=withHist.filter(e=>e.type==='wr').map(e=>{const h=exHistory(e.id);let bw=0,br=0,b1=0;h.forEach(x=>x.sets.forEach(s=>{if((s.w||0)>bw){bw=s.w;br=s.r}b1=Math.max(b1,e1rm(s.w,s.r))}));return {e,bw,br,b1}}).sort((a,b)=>b.b1-a.b1).slice(0,8);
+  const prs=withHist.filter(e=>e.type==='wr').map(e=>{const h=exHistory(e.id);let bw=0,br=0,b1=0,wId=null,wT=0,oId=null,oT=0;h.forEach(x=>x.sets.forEach(s=>{if((s.w||0)>bw){bw=s.w;br=s.r;wId=x.id;wT=x.t}const v=e1rm(s.w,s.r);if(v>b1){b1=v;oId=x.id;oT=x.t}}));return {e,bw,br,b1,wId,wT,oId,oT}}).sort((a,b)=>b.b1-a.b1).slice(0,8);
   return `<h1>Stats</h1>
   <div class="grid2"><div class="kv"><small>This week</small><b>${wk.length} workouts</b></div><div class="kv"><small>Volume this week</small><b>${fmtVol(wk.reduce((a,w)=>a+volumeOf(w.items),0))}</b></div>
   <div class="kv"><small>All-time workouts</small><b>${ws.length}</b></div><div class="kv"><small>All-time volume</small><b>${fmtVol(ws.reduce((a,w)=>a+volumeOf(w.items),0))}</b></div></div>
   <h2>Workouts per week</h2><div class="card">${barChart(vals,labs)}</div>
   <h2>Exercise progress</h2><div class="card">${withHist.length?`<select data-f="statEx">${withHist.map(e=>`<option value="${e.id}" ${e.id===ui.statEx?'selected':''}>${esc(e.name)}</option>`).join('')}</select><div style="margin-top:10px" id="statchart">${statChart()}</div>`:'<p class="muted">Complete a workout to see progress charts.</p>'}</div>
-  ${prs.length?`<h2>Personal records</h2><div class="card">${prs.map(p=>`<div class="li"><span>${esc(p.e.name)}</span><span class="sm"><b>${dw(p.bw)} ${U()} × ${p.br}</b> <span class="muted">· 1RM ≈ ${Math.round(dw(p.b1))}</span></span></div>`).join('')}</div>`:''}
+  ${prs.length?`<h2>Personal records</h2><div class="card">${prs.map(p=>`<div class="li"><div><div>${esc(p.e.name)}</div><div class="sm muted">${p.wId===p.oId?fmtDateY(p.wT):`Heaviest ${fmtDateY(p.wT)} · 1RM ${fmtDateY(p.oT)}`}</div></div><span class="sm" style="text-align:right"><b class="plink" data-act="viewWorkout" data-id="${p.wId}">${dw(p.bw)} ${U()} × ${p.br} ›</b><br><span class="muted plink" data-act="viewWorkout" data-id="${p.oId}">1RM ≈ ${Math.round(dw(p.b1))} ›</span></span></div>`).join('')}</div>`:''}
   <h2>Settings & backup</h2><div class="card">
   <label class="lb" style="margin-top:0">Appearance</label><div class="seg"><button class="${S.settings.theme!=='light'?'on':''}" data-act="theme" data-v="dark">Dark</button><button class="${S.settings.theme==='light'?'on':''}" data-act="theme" data-v="light">Light</button></div><label class="lb">Units</label><div class="seg"><button class="${U()==='kg'?'on':''}" data-act="unit" data-u="kg">kg</button><button class="${U()==='lb'?'on':''}" data-act="unit" data-u="lb">lb</button></div>
   <label class="lb">Default rest timer (seconds, 0 = off — also adjustable during a workout)</label><input inputmode="numeric" data-f="rest" value="${S.settings.rest}">
