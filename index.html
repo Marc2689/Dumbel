@@ -1145,7 +1145,7 @@ function prevSets(exId,before){
 function exHistory(id){
   const out=[];chrono().forEach(w=>{const its=w.items.filter(i=>i.exId===id);if(!its.length)return;
     const sets=its.flatMap(i=>i.sets).filter(s=>s.t!=='warmup');if(!sets.length)return;
-    out.push({t:w.start,sets,maxW:Math.max(0,...sets.map(s=>s.w||0)),best1:Math.max(0,...sets.map(s=>e1rm(s.w,s.r))),maxR:Math.max(0,...sets.map(s=>s.r||0)),vol:sets.reduce((a,s)=>a+(s.w||0)*(s.r||0),0)})});
+    out.push({t:w.start,id:w.id,sets,maxW:Math.max(0,...sets.map(s=>s.w||0)),best1:Math.max(0,...sets.map(s=>e1rm(s.w,s.r))),maxR:Math.max(0,...sets.map(s=>s.r||0)),vol:sets.reduce((a,s)=>a+(s.w||0)*(s.r||0),0)})});
   return out}
 
 /* ---------- charts ---------- */
@@ -1198,6 +1198,7 @@ function itemHTML(it,i){
     <button data-act="replaceEx" data-i="${i}" title="Replace exercise" aria-label="Replace exercise" style="font-size:12px;white-space:nowrap">⇄ Replace</button><button data-act="moveItem" data-i="${i}" data-d="-1">↑</button><button data-act="moveItem" data-i="${i}" data-d="1">↓</button><button data-act="delItem" data-i="${i}">🗑</button></div>
     ${t==='wr'?`<button class="btn sm" style="width:100%;margin-bottom:6px" data-act="calc" data-i="${i}">⚖ Plate / bar weight calculator</button>`:''}
     ${t==='time'?'':`<div class="row-b exrest"><span class="muted sm">⏱ Rest${S.restByEx&&S.restByEx[ex.id]!=null?'':' (default)'}</span><span><button data-act="exRest" data-id="${ex.id}" data-d="-15">−</button><b style="padding:0 8px;min-width:50px;display:inline-block;text-align:center">${fmtRest(restFor(ex.id))}</b><button data-act="exRest" data-id="${ex.id}" data-d="15">+</button>${S.restByEx&&S.restByEx[ex.id]!=null?`<button data-act="exRestReset" data-id="${ex.id}" title="Use default">↺</button>`:''}</span></div>`}
+    <textarea rows="1" data-f="inote" data-i="${i}" placeholder="Exercise notes (e.g. seat 4, slow negatives)" style="margin-bottom:6px">${esc(it.note||'')}</textarea>
     <div class="srow head" style="grid-template-columns:${setCols(t)}">${head}</div>${rows}
     <button class="btn ghost" style="width:100%;margin-top:6px" data-act="addSet" data-i="${i}">+ Add Set</button></section>`}
 
@@ -1368,7 +1369,7 @@ function exDetail(id){
   const pts=h.map(x=>({x:x.t,y:ex.type==='wr'?dw(x.best1):x.maxR}));
   return `<div class="row-b"><h1 style="margin:0">${esc(ex.name)}</h1><button class="btn sm" data-act="close1">Close</button></div><div class="muted">${esc(ex.muscle)} · ${TYPES[ex.type]}</div>
   ${howTo(ex)}<h2>Records</h2>${rec||'<p class="muted">No history yet.</p>'}<h2>Progress</h2><div class="card">${lineChart(pts,v=>Math.round(v*10)/10)}</div>
-  <h2>Recent sessions</h2>${h.slice(-5).reverse().map(x=>`<div class="li"><span>${fmtDate(x.t)}</span><span class="sm">${x.sets.map(s=>ex.type==='wr'?`${dw(s.w)}×${s.r}`:s.r).join(', ')}</span></div>`).join('')||'<p class="muted">–</p>'}
+  <h2>Recent sessions</h2>${h.slice(-5).reverse().map(x=>`<div class="li" style="cursor:pointer" data-act="viewWorkout" data-id="${x.id}"><span>${fmtDate(x.t)}</span><span class="sm">${x.sets.map(s=>ex.type==='wr'?`${dw(s.w)}×${s.r}`:s.r).join(', ')} <span class="muted">›</span></span></div>`).join('')||'<p class="muted">–</p>'}
   <div class="grid2" style="margin-top:14px">${ex.custom?`<button class="btn" data-act="editEx" data-id="${id}">Edit</button>`:''}<button class="btn danger" data-act="delEx" data-id="${id}">Delete</button></div>`}
 
 /* ---------- workout detail / summary ---------- */
@@ -1391,6 +1392,7 @@ function drawWorkoutEdit(){const w=ui.we,d=new Date(w.start),dt=dkey(w.start)+'T
   <label class="lb">Notes</label><textarea rows="2" data-f="wenote" placeholder="Workout notes">${esc(w.note||'')}</textarea>
   ${w.items.map((it,i)=>{const ex=exById(it.exId),t=ex.type,cols=t==='wr'?'40px 1fr 1fr 30px':'40px 1fr 30px';
     return `<div class="card"><div class="row-b"><b style="color:var(--acc)">${esc(ex.name)}</b><button data-act="weDelItem" data-i="${i}">🗑</button></div>
+    <textarea rows="1" data-f="weinote" data-i="${i}" placeholder="Exercise notes" style="margin:6px 0">${esc(it.note||'')}</textarea>
     <div class="wed" style="grid-template-columns:${cols};font-size:12px;color:var(--mut);text-align:center"><span>SET</span>${t==='wr'?`<span>${U().toUpperCase()}</span>`:''}<span>${t==='time'?'SEC':'REPS'}</span><span></span></div>
     ${it.sets.map((s,j)=>`<div class="wed" style="grid-template-columns:${cols}"><button class="sn t-${s.t||'normal'}" style="background:var(--card2);padding:8px 0;font-weight:700" data-act="weType" data-i="${i}" data-s="${j}">${setLabel(it.sets,j)}</button>
       ${t==='wr'?`<input inputmode="decimal" style="text-align:center" data-f="wew" data-i="${i}" data-s="${j}" value="${s.w?esc(dw(s.w)):''}">`:''}
@@ -1404,6 +1406,7 @@ function drawRoutine(){const r=ui.rt;
   sheet(`<div class="row-b"><h1 style="margin:0">${r.id?'Edit':'New'} routine</h1><button class="btn sm acc" data-act="saveRoutine">Save</button></div>
   <label class="lb">Name</label><input data-f="rtname" value="${esc(r.name)}" placeholder="e.g. Push Day"><label class="lb">Routine notes</label><textarea rows="2" data-f="rtnote" placeholder="Notes for this routine">${esc(r.note||'')}</textarea>
   ${r.items.map((it,i)=>{const ty=rtTypes(it),has=it.rest!=null,rest=has?it.rest:(+S.settings.rest||0);return `<div class="card"><div class="row-b"><b>${esc(exById(it.exId).name)}</b><button data-act="rtDel" data-i="${i}">🗑</button></div>
+    <textarea rows="2" data-f="rtinote" data-i="${i}" placeholder="Notes for this exercise (setup, tempo, cues…)" style="margin-top:8px">${esc(it.note||'')}</textarea>
     <div class="row-b exrest" style="margin-top:8px"><span class="muted sm">⏱ Rest${has?'':' (default)'}</span><span><button data-act="rtRest" data-i="${i}" data-d="-15">−</button><b style="padding:0 8px;min-width:50px;display:inline-block;text-align:center">${fmtRest(rest)}</b><button data-act="rtRest" data-i="${i}" data-d="15">+</button>${has?`<button data-act="rtRestReset" data-i="${i}" title="Use default">↺</button>`:''}</span></div>
     ${ty.map((k,j)=>`<div class="row-b" style="margin:5px 0"><button class="chk t-${k}" style="width:44px;font-weight:700" data-act="rtType" data-i="${i}" data-s="${j}">${k==='normal'?ty.slice(0,j+1).filter(x=>x==='normal').length:STYPES[k][0]}</button><span class="muted sm" style="flex:1">${STYPES[k][1]}</span><button data-act="rtDelSet" data-i="${i}" data-s="${j}">✕</button></div>`).join('')}
     <button class="btn ghost" style="width:100%;margin-top:6px" data-act="rtSets" data-i="${i}" data-d="1">+ Add Set</button></div>`}).join('')}
@@ -1471,7 +1474,7 @@ const ACT={
   startEmpty(){if(S.active)return render();startWorkout([])},
   async startRoutine(t){if(S.active&&!await askConfirm('A workout is in progress. Replace it?'))return;
     const r=S.routines.find(x=>x.id===t.dataset.id);if(!r)return;
-    routineRests(r.items);startWorkout(r.items.map(i=>({id:uid(),exId:i.exId,sets:routineSets(i)})),r.name);if(S.active){S.active.note=r.note||'';S.active.routineId=r.id}save();render()},
+    routineRests(r.items);startWorkout(r.items.map(i=>({id:uid(),exId:i.exId,note:i.note||'',sets:routineSets(i)})),r.name);if(S.active){S.active.note=r.note||'';S.active.routineId=r.id}save();render()},
   async startPreset(t){if(S.active&&!await askConfirm('A workout is in progress. Replace it?'))return;
     const p=PRESETS.find(x=>x.id===t.dataset.id);if(!p)return;
     startWorkout(presetItems(p).map(i=>({id:uid(),exId:i.exId,sets:Array.from({length:i.sets},blank)})),p.name)},
@@ -1505,7 +1508,7 @@ const ACT={
   async updateRoutine(){const A=S.active;if(!A.items.length)return toast('Add an exercise first');if(!S.routines.length)return toast('Create a routine first');const choices=S.routines.map((r,i)=>`${i+1}. ${r.name}`).join('\n');const pick=await askText('Update which routine? Enter its number:\n'+choices,'1');if(!pick)return;const r=S.routines[Number(pick)-1];if(!r)return toast('Invalid routine number');if(!await askConfirm(`Replace ${r.name} with the current workout exercises?`))return;r.items=A.items.map(i=>({exId:i.exId,sets:i.sets.length,types:i.sets.map(s=>s.t||'normal'),...(S.restByEx&&S.restByEx[i.exId]!=null?{rest:S.restByEx[i.exId]}:{})}));r.note=A.note||'';save();toast('Routine updated')},
   replaceEx(t){const index=+t.dataset.i;openPicker(ids=>{if(ids.length){S.active.items[index].exId=ids[0];save();render()}},true)},
   async finish(){
-    const A=S.active,done=A.items.map(it=>({exId:it.exId,sets:it.sets.filter(s=>s.done).map(s=>{const o={w:s.w===''?0:s.w,r:s.r===''?0:s.r};if(s.t&&s.t!=='normal')o.t=s.t;return o})})).filter(it=>it.sets.length);
+    const A=S.active,done=A.items.map(it=>({exId:it.exId,...(it.note&&it.note.trim()?{note:it.note.trim()}:{}),sets:it.sets.filter(s=>s.done).map(s=>{const o={w:s.w===''?0:s.w,r:s.r===''?0:s.r};if(s.t&&s.t!=='normal')o.t=s.t;return o})})).filter(it=>it.sets.length);
     if(!done.length){if(await askConfirm('No completed sets. Discard this workout?')){S.active=null;save();render()}return}
     if(A.items.some(it=>it.sets.some(s=>!s.done))&&!await askConfirm('Some sets are not ticked and will be dropped. Finish anyway?'))return;
     const w={id:A.id,name:A.name||workoutName(),note:A.note||'',start:A.start,end:Date.now(),items:done};
@@ -1524,7 +1527,7 @@ const ACT={
     const rt=A.routineId&&S.routines.find(r=>r.id===A.routineId);
     if(rt&&A.items.length&&rt.items.map(i=>i.exId).join()!==A.items.map(i=>i.exId).join()){
       if(await appDialog(`You changed the exercises from "${rt.name}". Update the routine with this workout's exercises?`,{confirm:true,ok:'Update routine',cancel:'Keep original'})){
-        rt.items=A.items.map(i=>({exId:i.exId,sets:i.sets.length,types:i.sets.map(s=>s.t||'normal'),...(S.restByEx&&S.restByEx[i.exId]!=null?{rest:S.restByEx[i.exId]}:{})}));
+        rt.items=A.items.map(i=>({exId:i.exId,note:i.note||'',sets:i.sets.length,types:i.sets.map(s=>s.t||'normal'),...(S.restByEx&&S.restByEx[i.exId]!=null?{rest:S.restByEx[i.exId]}:{})}));
         save();render();toast('Routine updated')}}},
   /* routines */
   newRoutine(){ui.rt={id:null,name:'',items:[]};drawRoutine()},
@@ -1565,7 +1568,7 @@ const ACT={
   pkMuscle(t){ui.pk.m=t.dataset.m;drawPicker()},
   pkDone(){const ids=[...ui.pk.sel],cb=ui.pk.cb;sheet('',2);if(ids.length)cb(ids)},
   /* history */
-  viewWorkout(t){sheet(workoutDetail(t.dataset.id))},
+  viewWorkout(t){sheet(workoutDetail(t.dataset.id));const p=$('#sheet .panel');if(p)p.scrollTop=0},
   editWorkout(t){const w=S.workouts.find(x=>x.id===t.dataset.id);if(!w)return;ui.we=JSON.parse(JSON.stringify(w));drawWorkoutEdit()},
   weCancel(){sheet(workoutDetail(ui.we.id))},
   weAddSet(t){const it=ui.we.items[+t.dataset.i],last=it.sets[it.sets.length-1];it.sets.push(last?{w:last.w,r:last.r}:{w:0,r:0});drawWorkoutEdit()},
@@ -1585,7 +1588,7 @@ const ACT={
   async delWorkout(t){if(await askConfirm('Delete this workout permanently?')){S.workouts=S.workouts.filter(w=>w.id!==t.dataset.id);save();sheet('');render()}},
   async repeatWorkout(t){if(S.active&&!await askConfirm('A workout is in progress. Replace it?'))return;const w=S.workouts.find(x=>x.id===t.dataset.id);startWorkout(w.items.map(i=>({id:uid(),exId:i.exId,sets:i.sets.map(s=>{const b=blank();if(s.t)b.t=s.t;return b})})),w.name)},
   async wToRoutine(t){const w=S.workouts.find(x=>x.id===t.dataset.id),n=await askText('Routine name',w.name);if(!n)return;
-    S.routines.push({id:uid(),name:n.trim(),note:w.note||'',items:w.items.map(i=>({exId:i.exId,sets:i.sets.length,types:i.sets.map(s=>s.t||'normal')}))});save();toast('Routine saved')},
+    S.routines.push({id:uid(),name:n.trim(),note:w.note||'',items:w.items.map(i=>({exId:i.exId,note:i.note||'',sets:i.sets.length,types:i.sets.map(s=>s.t||'normal')}))});save();toast('Routine saved')},
   /* settings */
   unit(t){S.settings.unit=t.dataset.u;save();render()},
    theme(t){S.settings.theme=t.dataset.v;document.body.classList.toggle('light',t.dataset.v==='light');save();render()},
@@ -1613,6 +1616,9 @@ document.addEventListener('input',e=>{const t=e.target,f=t.dataset&&t.dataset.f;
   else if(f==='workoutNote'){S.active.note=t.value;save()}
   else if(f==='exq'){ui.exq=t.value;$('#exlist').innerHTML=exListHTML()}
   else if(f==='pkq'){ui.pk.q=t.value;$('#pklist').innerHTML=pickerList()}
+  else if(f==='inote'){const it=S.active&&S.active.items[+t.dataset.i];if(it){it.note=t.value;save()}}
+  else if(f==='rtinote')ui.rt.items[+t.dataset.i].note=t.value;
+  else if(f==='weinote')ui.we.items[+t.dataset.i].note=t.value;
   else if(f==='wename')ui.we.name=t.value;
   else if(f==='wenote')ui.we.note=t.value;
   else if(f==='westart')ui.we.startStr=t.value;
@@ -1725,7 +1731,10 @@ if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catc
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
 render();keepAwake();
 /* ---------- Android back button: close the top-most overlay / go to Workout tab, never exit the app ---------- */
-try{history.replaceState({dumbel:0},'');history.pushState({dumbel:1},'');
+/* Android Chrome ignores history entries added without a user tap, so the guard entry is (re)added on taps too */
+const guard=()=>{try{if(!(history.state&&history.state.dumbel===1))history.pushState({dumbel:1},'')}catch(e){}};
+['pointerdown','touchstart','click','keydown'].forEach(ev=>document.addEventListener(ev,guard,{capture:true,passive:true}));
+try{history.replaceState({dumbel:0},'');guard();
 window.addEventListener('popstate',()=>{
   const dlg=$('#dialog');
   if(dlg&&!dlg.hidden){const c=$('#dialogCancel');if(c)c.click()}
@@ -1733,7 +1742,7 @@ window.addEventListener('popstate',()=>{
   else if($('#sheet2').classList.contains('on'))sheet('',2);
   else if($('#sheet').classList.contains('on')){sheet('');render()}
   else if(ui.tab!=='workout'){ui.tab='workout';render();window.scrollTo(0,0)}
-  history.pushState({dumbel:1},'')})}catch(e){}
+  guard()})}catch(e){}
 </script>
 </body>
 </html>
