@@ -1310,33 +1310,8 @@ function exEditor(id,fromPicker){
   <label class="lb">Muscle group</label><select data-f="exmuscle">${MUSCLES.map(m=>`<option ${m===e.muscle?'selected':''}>${m}</option>`).join('')}</select>
   <label class="lb">Type</label><select data-f="extype">${Object.entries(TYPES).map(([k,v])=>`<option value="${k}" ${k===e.type?'selected':''}>${v}</option>`).join('')}</select>
   <button class="btn big" data-act="saveEx">Save</button>`,fromPicker?2:1)}
-const MUSCLE_INFO={
- Chest:['Pectorals (chest)','Front delts and triceps assist on pressing moves.'],
- Back:['Lats, rhomboids, traps and lower back','Biceps and rear delts assist on pulling moves.'],
- Shoulders:['Front, side and rear deltoids, plus traps','Triceps assist on presses; rotator cuff stabilises.'],
- Biceps:['Biceps brachii and brachialis','Forearms assist with grip.'],
- Triceps:['All three heads of the triceps','Extends the elbow; assists every pressing move.'],
- Quads:['Quadriceps (front of thigh)','Extend the knee; glutes and core assist on squats and lunges.'],
- Hamstrings:['Hamstrings (back of thigh)','Bend the knee and extend the hip; glutes and lower back assist.'],
- Glutes:['Gluteus maximus, medius and minimus','Extend and abduct the hip; hamstrings assist.'],
- Calves:['Gastrocnemius and soleus','Point the foot; important for walking, running and jumping.'],
- Core:['Abs, obliques and deep stabilisers','Brace the trunk and protect the lower back.'],
- Cardio:['Heart, lungs and legs','Builds conditioning and endurance.'],
- Other:['Full body, grip or specialty','Works several areas at once, or smaller muscles like forearms and neck.']};
-const baseName=n=>n.replace(/\s*\(.*?\)\s*/g,' ').replace(/\s+-\s+.*$/,'').trim().toLowerCase();
-let INFO_BASE=null;
-function infoFor(ex){
-  if(ex.custom)return null;
-  if(INFO[ex.name])return {i:INFO[ex.name]};
-  if(!INFO_BASE){INFO_BASE={};Object.keys(INFO).forEach(k=>{const b=baseName(k);if(!INFO_BASE[b])INFO_BASE[b]=k})}
-  const k=INFO_BASE[baseName(ex.name)];
-  return k?{i:INFO[k],from:k}:null}
-function howTo(ex){
-  const m=MUSCLE_INFO[ex.muscle],mc=m?`<h2>Muscle group</h2><div class="card"><b>${esc(ex.muscle)}</b> — ${esc(m[0])}<div class="muted sm" style="margin-top:4px">${esc(m[1])}</div></div>`:'';
-  const f=infoFor(ex);
-  if(!f)return mc+(ex.custom?'':'<h2>How to do it</h2><div class="card muted sm">No step-by-step guide for this exercise yet.</div>');
-  const i=f.i;
-  return mc+`<h2>How to do it</h2><div class="card">${f.from?`<div class="muted sm" style="margin-bottom:6px">General guide based on “${esc(f.from)}” — adjust for the equipment you’re using.</div>`:''}<ol class="how">${i.steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ol>${i.tip?`<div class="tip">💡 ${esc(i.tip)}</div>`:''}</div>`}
+function howTo(ex){const i=!ex.custom&&INFO[ex.name];if(!i)return '';
+  return `<h2>How to do it</h2><div class="card"><ol class="how">${i.steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ol>${i.tip?`<div class="tip">💡 ${esc(i.tip)}</div>`:''}</div>`}
 function exDetail(id){
   const ex=exById(id),h=exHistory(id);
   let rec='';
