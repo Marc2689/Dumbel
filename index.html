@@ -622,6 +622,15 @@ function cleanExerciseDuplicates(){
  save();
 }
 cleanExerciseDuplicates();
+/* set types from imports (e.g. Hevy "dropset") are normalised to the ones the app knows */
+const SET_TYPES_OK=['normal','warmup','failure','drop'];
+const fixType=t=>t==null||SET_TYPES_OK.includes(t)?t:(/drop/i.test(t)?'drop':/warm/i.test(t)?'warmup':/fail/i.test(t)?'failure':'normal');
+function fixSetTypes(){let ch=false;
+ const fix=s=>{if(s&&s.t!=null&&!SET_TYPES_OK.includes(s.t)){s.t=fixType(s.t);if(s.t==='normal')delete s.t;ch=true}};
+ [...(S.workouts||[]),...(S.active?[S.active]:[])].forEach(w=>(w.items||[]).forEach(i=>(i.sets||[]).forEach(fix)));
+ (S.routines||[]).forEach(r=>(r.items||[]).forEach(i=>{if(Array.isArray(i.types)&&i.types.some(t=>!SET_TYPES_OK.includes(t))){i.types=i.types.map(t=>fixType(t)||'normal');ch=true}}));
+ if(ch)save()}
+fixSetTypes();
 document.body.classList.toggle('light',S.settings.theme==='light');
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('Could not save — storage full?')}}
 /* ---------- how-to instructions (built-in exercises) ---------- */
@@ -1118,7 +1127,7 @@ function weekStart(t){const d=new Date(t);d.setHours(0,0,0,0);const day=(d.getDa
 function workoutName(){const h=new Date().getHours();return (h<12?'Morning':h<17?'Afternoon':h<21?'Evening':'Night')+' Workout'}
 const blank=()=>({w:'',r:'',done:false});
 const STYPES={normal:['1','Normal Set'],warmup:['W','Warm Up Set'],failure:['F','Failure Set'],drop:['D','Drop Set']};
-const setLabel=(sets,j)=>{const t=sets[j].t||'normal';if(t!=='normal')return STYPES[t][0];let n=0;for(let k=0;k<=j;k++)if((sets[k].t||'normal')==='normal')n++;return String(n)};
+const setLabel=(sets,j)=>{const t=sets[j].t||'normal';if(t!=='normal')return (STYPES[t]||STYPES[fixType(t)]||['?'])[0];let n=0;for(let k=0;k<=j;k++)if((sets[k].t||'normal')==='normal')n++;return String(n)};
 const rtTypes=it=>{if(!Array.isArray(it.types)||it.types.length!==it.sets)it.types=Array.from({length:it.sets},(_,k)=>(it.types&&it.types[k])||'normal');return it.types};
 const routineSets=i=>Array.from({length:i.sets},(_,k)=>{const b=blank(),ty=i.types&&i.types[k];if(ty&&ty!=='normal')b.t=ty;return b});
 const routineRests=items=>{S.restByEx=S.restByEx||{};items.forEach(i=>{if(i.rest!=null)S.restByEx[i.exId]=i.rest})};
@@ -1136,6 +1145,23 @@ function animalFor(kg){
   const c=Math.round(n);return {emoji:a[0],text:`about the weight of ${c.toLocaleString()} ${c===1?a[1]:a[2]}`}}
 function animalCard(kg,label){const a=animalFor(kg);if(!a)return '';
   return `<div class="animal"><div class="big">${a.emoji}</div><div><b>${esc(label)} ${fmtVol(kg)}</b></div><div class="muted">${esc(a.text)}</div></div>`}
+
+/* sanity check for a logged set. Returns a short description if it looks like a typo, else null.
+   History is only used once an exercise has 3+ earlier sessions, so new users / new exercises are never nagged;
+   without history only absurd values (1500+ kg, 500+ reps) are flagged. Warm-up sets are never checked. */
+function suspectSet(exId,s,skipId){
+  const ex=exById(exId),ty=ex.type,t=s.t,w=+s.w||0,r=+s.r||0;if(t==='warmup')return null;
+  const sess=S.workouts.filter(x=>x.id!==skipId).map(x=>x.items.filter(i=>i.exId===exId).flatMap(i=>i.sets).filter(q=>q.t!=='warmup'&&q.t!=='drop')).filter(a=>a.length);
+  const med=a=>{a=a.slice().sort((x,y)=>x-y);const n=a.length;return n?(n%2?a[(n-1)/2]:(a[n/2-1]+a[n/2])/2):0};
+  const known=sess.length>=3,mw=known?med(sess.map(a=>Math.max(0,...a.map(q=>q.w||0)))):0,mr=known?med(sess.map(a=>Math.max(0,...a.map(q=>q.r||0)))):0;
+  const what=ty==='wr'?`${dw(w)} ${U()} × ${r}`:ty==='time'?fmtSec(r):`${r} reps`,nm=ex.name;
+  if(ty==='wr'){
+    if(w>1500)return `${what} on ${nm} is extremely heavy.`;
+    if(mw>0&&w>mw*3)return `${what} on ${nm} is far above your usual (around ${dw(mw)} ${U()}).`;
+    if(mw>0&&w>0&&w<mw/8&&t!=='drop')return `${what} on ${nm} is far below your usual (around ${dw(mw)} ${U()}).`}
+  if(ty!=='time'&&r>500)return `${what} on ${nm} is an unusually high rep count.`;
+  if(mr>0&&r>mr*3&&r-mr>(ty==='time'?120:15))return `${what} on ${nm} is far above your usual (around ${ty==='time'?fmtSec(mr):mr+' reps'}).`;
+  return null}
 
 /* history helpers */
 function chrono(){return S.workouts.slice().sort((a,b)=>a.start-b.start)}
@@ -1501,10 +1527,12 @@ const ACT={
   async delItem(t){if(!await askConfirm('Remove this exercise from the workout?'))return;S.active.items.splice(+t.dataset.i,1);save();render()},
   moveItem(t){const a=S.active.items,i=+t.dataset.i,j=i+ +t.dataset.d;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];save();render()},
   copyPrev(t){const it=S.active.items[+t.dataset.i],s=it.sets[+t.dataset.s],p=prevSets(it.exId,S.active.start)[+t.dataset.s];if(!p)return;s.w=p.w;s.r=p.r;save();render()},
-  toggleSet(t){const A=S.active,it=A.items[+t.dataset.i],s=it.sets[+t.dataset.s],ty=exById(it.exId).type;
+  async toggleSet(t){const A=S.active,it=A.items[+t.dataset.i],s=it.sets[+t.dataset.s],ty=exById(it.exId).type;
     if(!s.done){const p=prevSets(it.exId,A.start)[+t.dataset.s];
       if(s.r===''&&p&&p.r)s.r=p.r;if(ty==='wr'&&s.w===''&&p&&p.w!=null)s.w=p.w;
       if(s.r===''||(ty==='wr'&&s.w==='')){return toast(ty==='wr'?'Enter weight and reps first':'Enter a value first')}
+      const sus=suspectSet(it.exId,s,A.id);
+      if(sus&&!await appDialog(sus+'\n\nIs that right?',{confirm:true,ok:'Yes, log it',cancel:'Fix it'})){save();render();return}
       s.done=true;const rest=restFor(it.exId);if(rest>0&&ty!=='time'){A.restEnd=Date.now()+rest*1000;A.restTotal=rest*1000}
       try{audio=audio||new (window.AudioContext||window.webkitAudioContext)()}catch(e){}
       if(ty==='wr'&&s.t!=='warmup')checkPR(A,it,s);
@@ -1591,7 +1619,9 @@ const ACT={
   async weDelItem(t){if(!await askConfirm('Remove this exercise from the workout?'))return;ui.we.items.splice(+t.dataset.i,1);drawWorkoutEdit()},
   weAddEx(){openPicker(ids=>{ids.forEach(id=>ui.we.items.push({exId:id,sets:[{w:0,r:0}]}));drawWorkoutEdit()})},
   weType(t){ui.st={scope:'we',i:+t.dataset.i,s:+t.dataset.s};drawSetType()},
-  weSave(){const w=ui.we;if(!w.name.trim())return toast('Give the workout a name');
+  async weSave(){const w=ui.we;if(!w.name.trim())return toast('Give the workout a name');
+    const bad=[];w.items.forEach(it=>it.sets.forEach(s=>{if((+s.r||0)>0||(+s.w||0)>0){const m=suspectSet(it.exId,s,w.id);if(m)bad.push(m)}}));
+    if(bad.length&&!await appDialog(bad.slice(0,3).join('\n\n')+(bad.length>3?`\n\n…and ${bad.length-3} more`:'')+'\n\nSave anyway?',{confirm:true,ok:'Save anyway',cancel:'Review'}))return;
     const start=new Date(w.startStr||'').getTime();const st=isNaN(start)?w.start:start;
     w.items.forEach(it=>it.sets=it.sets.filter(s=>(+s.r||0)>0||(+s.w||0)>0));
     w.items=w.items.filter(it=>it.sets.length);if(!w.items.length)return toast('Add at least one set with values');
@@ -1665,7 +1695,7 @@ $('#file').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;
     S.bars=[...myBars,...(Array.isArray(d.bars)?d.bars:[]).filter(b=>b&&b.id&&!myBars.some(m=>m.id===b.id))];if(!S.bars.length)S.bars=defaultBars();
     const theirs={};Object.entries(d.barByEx||{}).forEach(([k,v])=>theirs[idMap.get(k)||k]=v);
     S.barByEx=Object.assign(theirs,myBarByEx);
-    S.routines=S.routines||[];S.settings=Object.assign({unit:'kg',rest:90},d.settings);S.restByEx=S.restByEx||{};save();render();toast('Backup imported')}catch(err){toast('That is not a valid Workout Tracker backup')}};
+    S.routines=S.routines||[];S.settings=Object.assign({unit:'kg',rest:90},d.settings);S.restByEx=S.restByEx||{};fixSetTypes();save();render();toast('Backup imported')}catch(err){toast('That is not a valid Workout Tracker backup')}};
   rd.readAsText(f);e.target.value=''});
 
 /* ---------- Hevy / CSV import ---------- */
@@ -1724,7 +1754,7 @@ function planHevyImport(text){
       const note=g(r,'exercise_notes');if(note&&!cur.note)cur.note=note;
       const dur=parseFloat(g(r,'duration_seconds'))||0,reps=parseFloat(g(r,'reps'))||0,dist=dmi(r);
       const set={w:+wkg(r).toFixed(3),r:ex.type==='time'?dur:reps,i:parseInt(g(r,'set_index'),10)||0};
-      const ty=g(r,'set_type');if(ty&&ty!=='normal')set.t=ty;
+      const ty=fixType(g(r,'set_type'));if(ty&&ty!=='normal')set.t=ty;
       if(dist>0)set.d=dist;
       cur.sets.push(set)});
     items.forEach(it=>{it.sets.sort((a,b)=>a.i-b.i);it.sets.forEach(s=>delete s.i)});
