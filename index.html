@@ -585,8 +585,9 @@ function seedExercises(){const out=[];let m='Other';
 
 /* ---------- state ---------- */
 const KEY='ironlog.v1'; /* unchanged on purpose so existing saved data keeps loading */
-const fresh=()=>({exercises:seedExercises(),routines:[],workouts:[],active:null,settings:{unit:'kg',rest:90},restByEx:{}});
-function load(){try{const d=JSON.parse(localStorage.getItem(KEY));if(d&&Array.isArray(d.exercises)&&Array.isArray(d.workouts)){d.routines=d.routines||[];d.restByEx=d.restByEx||{};d.settings=Object.assign({unit:'kg',rest:90},d.settings);return d}}catch(e){}return fresh()}
+const defaultBars=()=>[{id:'b_oly',name:'Olympic bar',kg:20,lb:45},{id:'b_wom',name:"Women's bar",kg:15,lb:35},{id:'b_ez',name:'EZ curl bar',kg:10,lb:25},{id:'b_smith',name:'Smith machine bar',kg:15,lb:35},{id:'b_none',name:'No bar / machine',kg:0,lb:0}];
+const fresh=()=>({exercises:seedExercises(),routines:[],workouts:[],active:null,settings:{unit:'kg',rest:90},restByEx:{},bars:defaultBars(),barByEx:{}});
+function load(){try{const d=JSON.parse(localStorage.getItem(KEY));if(d&&Array.isArray(d.exercises)&&Array.isArray(d.workouts)){d.routines=d.routines||[];d.restByEx=d.restByEx||{};d.bars=Array.isArray(d.bars)&&d.bars.length?d.bars:defaultBars();d.barByEx=d.barByEx||{};d.settings=Object.assign({unit:'kg',rest:90},d.settings);return d}}catch(e){}return fresh()}
 let S=load();
 function exerciseKey(n){return String(n||'').toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9]+/g,' ').trim().replace(/ +/g,' ')}
 function sameExercise(a,b){
@@ -1184,7 +1185,8 @@ function itemHTML(it,i){
       <button class="chk" data-act="toggleSet" data-i="${i}" data-s="${j}">✓</button>
       <button class="del" data-act="delSet" data-i="${i}" data-s="${j}">✕</button></div>`}).join('');
   return `<section class="card"><div class="exh"><span class="nm" data-act="exInfo" data-id="${ex.id}">${esc(ex.name)}</span>
-    <button data-act="replaceEx" data-i="${i}" title="Replace exercise">⇄</button><button data-act="moveItem" data-i="${i}" data-d="-1">↑</button><button data-act="moveItem" data-i="${i}" data-d="1">↓</button><button data-act="delItem" data-i="${i}">🗑</button></div>
+    <button data-act="replaceEx" data-i="${i}" title="Replace exercise" aria-label="Replace exercise" style="font-size:12px;white-space:nowrap">⇄ Replace</button><button data-act="moveItem" data-i="${i}" data-d="-1">↑</button><button data-act="moveItem" data-i="${i}" data-d="1">↓</button><button data-act="delItem" data-i="${i}">🗑</button></div>
+    ${t==='wr'?`<button class="btn sm" style="width:100%;margin-bottom:6px" data-act="calc" data-i="${i}">⚖ Plate / bar weight calculator</button>`:''}
     ${t==='time'?'':`<div class="row-b exrest"><span class="muted sm">⏱ Rest${S.restByEx&&S.restByEx[ex.id]!=null?'':' (default)'}</span><span><button data-act="exRest" data-id="${ex.id}" data-d="-15">−</button><b style="padding:0 8px;min-width:50px;display:inline-block;text-align:center">${fmtRest(restFor(ex.id))}</b><button data-act="exRest" data-id="${ex.id}" data-d="15">+</button>${S.restByEx&&S.restByEx[ex.id]!=null?`<button data-act="exRestReset" data-id="${ex.id}" title="Use default">↺</button>`:''}</span></div>`}
     <div class="srow head" style="grid-template-columns:${setCols(t)}">${head}</div>${rows}
     <button class="btn ghost" style="width:100%;margin-top:6px" data-act="addSet" data-i="${i}">+ Add Set</button></section>`}
@@ -1293,6 +1295,39 @@ function render(){
   $('#nav').innerHTML=NAV.map(([k,ic,l])=>`<button class="${ui.tab===k?'on':''}" data-act="tab" data-t="${k}"><span>${ic}</span>${l}</button>`).join('');
   updateRest();window.scrollTo(0,y)}
 
+/* ---------- plate / bar weight calculator ---------- */
+const PLATES={kg:[25,20,15,10,5,2.5,1.25,0.5],lb:[45,35,25,10,5,2.5,1.25]};
+const barDisp=b=>U()==='lb'?(b.lb!=null?b.lb:+(b.kg*2.20462).toFixed(1)):b.kg;
+const fmtN=n=>String(+(+n).toFixed(2));
+function curBar(exId){return S.bars.find(b=>b.id===S.barByEx[exId])||S.bars[0]}
+function calcPlates(target,bar){
+  const side=(target-bar)/2;if(!(target>0))return null;
+  if(side<-1e-9)return {below:true};
+  let rem=Math.round(side*1e4)/1e4;const out=[];
+  PLATES[U()].forEach(p=>{const n=Math.floor(rem/p+1e-9);if(n>0){out.push([p,n]);rem=Math.round((rem-n*p)*1e4)/1e4}});
+  return {out,left:rem,total:+(target-2*rem).toFixed(2)}}
+function calcResult(){const c=ui.calc,ex=exById(c.exId),bar=curBar(c.exId),bw=barDisp(bar),t=parseFloat(String(c.t).replace(',','.'));
+  const r=calcPlates(t,bw);
+  if(!r)return '<p class="muted">Enter a target weight to see what to load.</p>';
+  if(r.below)return `<p class="muted">Target is lighter than the ${esc(bar.name)} (${fmtN(bw)} ${U()}).</p>`;
+  const plates=r.out.length?r.out.map(([p,n])=>`<div class="kv"><small>${fmtN(p)} ${U()}</small><b>${n} × per side</b></div>`).join(''):'<p class="muted">No plates – bar only.</p>';
+  return `<div class="grid2" style="margin-top:8px">${plates}</div>
+    <p class="sm" style="margin:10px 0 0">${esc(bar.name)} ${fmtN(bw)} + 2 × ${fmtN((r.total-bw)/2)} = <b>${fmtN(r.total)} ${U()}</b></p>
+    ${r.left>0?`<p class="sm" style="color:var(--bad);margin:4px 0 0">Can't make ${fmtN(t)} exactly with standard plates – closest is ${fmtN(r.total)} ${U()}.</p>`:''}
+    <button class="btn big" data-act="calcApply" data-w="${r.total}">Use ${fmtN(r.total)} ${U()} for next set</button>`}
+function drawCalc(){const c=ui.calc,ex=exById(c.exId),cur=curBar(c.exId);
+  sheet(`<div class="row-b"><h1 style="margin:0">Weight calculator</h1><button class="btn sm" data-act="close1">Close</button></div>
+  <div class="muted">${esc(ex.name)}</div>
+  <h2>Bar / machine</h2>
+  <div class="chips" style="flex-wrap:wrap">${S.bars.map(b=>`<button class="chip ${b.id===cur.id?'on':''}" data-act="calcBar" data-id="${b.id}">${esc(b.name)} · ${fmtN(barDisp(b))} ${U()}</button>`).join('')}</div>
+  <h2>Target weight (${U()})</h2>
+  <input inputmode="decimal" data-f="calcw" placeholder="e.g. 100" value="${esc(c.t)}">
+  <div id="calcres">${calcResult()}</div>
+  <h2>Add custom bar / machine weight</h2>
+  <p class="muted sm" style="margin:0 0 8px">Empty bar weight, or the weight of a machine's sled / carriage before plates.</p>
+  <input data-f="barname" placeholder="Name (e.g. Leg press sled)" value="${esc(c.nn)}">
+  <div class="grid2" style="margin-top:8px"><input inputmode="decimal" data-f="barw" placeholder="Weight (${U()})" value="${esc(c.nw)}"><button class="btn acc" data-act="addBar">Add</button></div>
+  <h2>Manage</h2>${S.bars.map(b=>`<div class="li"><span>${esc(b.name)} · ${fmtN(barDisp(b))} ${U()}</span><button class="btn sm danger" data-act="delBar" data-id="${b.id}">Remove</button></div>`).join('')}`)}
 /* ---------- picker (layer 2) ---------- */
 function pickerList(){const q=ui.pk.q.trim().toLowerCase();
   return S.exercises.filter(e=>(ui.pk.m==='All'||e.muscle===ui.pk.m)&&(!q||e.name.toLowerCase().includes(q))).sort((a,b)=>a.name.localeCompare(b.name))
@@ -1323,7 +1358,7 @@ function exDetail(id){
   return `<div class="row-b"><h1 style="margin:0">${esc(ex.name)}</h1><button class="btn sm" data-act="close1">Close</button></div><div class="muted">${esc(ex.muscle)} · ${TYPES[ex.type]}</div>
   ${howTo(ex)}<h2>Records</h2>${rec||'<p class="muted">No history yet.</p>'}<h2>Progress</h2><div class="card">${lineChart(pts,v=>Math.round(v*10)/10)}</div>
   <h2>Recent sessions</h2>${h.slice(-5).reverse().map(x=>`<div class="li"><span>${fmtDate(x.t)}</span><span class="sm">${x.sets.map(s=>ex.type==='wr'?`${dw(s.w)}×${s.r}`:s.r).join(', ')}</span></div>`).join('')||'<p class="muted">–</p>'}
-  ${ex.custom?`<div class="grid2" style="margin-top:14px"><button class="btn" data-act="editEx" data-id="${id}">Edit</button><button class="btn danger" data-act="delEx" data-id="${id}">Delete</button></div>`:''}`}
+  <div class="grid2" style="margin-top:14px">${ex.custom?`<button class="btn" data-act="editEx" data-id="${id}">Edit</button>`:''}<button class="btn danger" data-act="delEx" data-id="${id}">Delete</button></div>`}
 
 /* ---------- workout detail / summary ---------- */
 function workoutDetail(id){
@@ -1365,6 +1400,19 @@ function download(name,text,type){const a=document.createElement('a');a.href=URL
 const ACT={
   tab(t){ui.tab=t.dataset.t;render();window.scrollTo(0,0)},
   close1(){sheet('');render()},close2(){sheet('',2)},
+  calc(t){const i=+t.dataset.i,it=S.active.items[i];if(!it)return;
+    const s=it.sets.find(s=>!s.done&&s.w!=='')||[...it.sets].reverse().find(s=>s.w!=='');
+    ui.calc={i,exId:it.exId,t:s?String(dw(s.w)):'',nn:'',nw:''};drawCalc()},
+  calcBar(t){S.barByEx[ui.calc.exId]=t.dataset.id;save();drawCalc()},
+  calcApply(t){const A=S.active,it=A&&A.items[ui.calc.i];if(!it)return;const w=tk(t.dataset.w);
+    let s=it.sets.find(s=>!s.done);if(!s){s=blank();it.sets.push(s)}s.w=w;save();sheet('');render();toast('Weight added to set')},
+  addBar(){const c=ui.calc,n=c.nn.trim(),w=parseFloat(String(c.nw).replace(',','.'));
+    if(!n)return toast('Enter a name');if(isNaN(w)||w<0)return toast('Enter a weight');
+    const b={id:'b_'+uid(),name:n,kg:+(U()==='kg'?w:w/2.20462).toFixed(3)};if(U()==='lb')b.lb=w;
+    S.bars.push(b);S.barByEx[c.exId]=b.id;c.nn='';c.nw='';save();drawCalc()},
+  async delBar(t){if(S.bars.length<2)return toast('Keep at least one bar');
+    if(!await askConfirm('Remove this bar / machine weight?'))return;
+    S.bars=S.bars.filter(b=>b.id!==t.dataset.id);save();drawCalc()},
   startEmpty(){if(S.active)return render();startWorkout([])},
   async startRoutine(t){if(S.active&&!await askConfirm('A workout is in progress. Replace it?'))return;
     const r=S.routines.find(x=>x.id===t.dataset.id);if(!r)return;
@@ -1399,7 +1447,7 @@ const ACT={
     const n=await askText('Routine name',A.name);if(!n)return;
     S.routines.push({id:uid(),name:n.trim(),note:A.note||'',items:A.items.map(i=>{const o={exId:i.exId,sets:i.sets.length,types:i.sets.map(s=>s.t||'normal')};if(S.restByEx&&S.restByEx[i.exId]!=null)o.rest=S.restByEx[i.exId];return o})});save();toast('Routine saved')},
   async updateRoutine(){const A=S.active;if(!A.items.length)return toast('Add an exercise first');if(!S.routines.length)return toast('Create a routine first');const choices=S.routines.map((r,i)=>`${i+1}. ${r.name}`).join('\n');const pick=await askText('Update which routine? Enter its number:\n'+choices,'1');if(!pick)return;const r=S.routines[Number(pick)-1];if(!r)return toast('Invalid routine number');if(!await askConfirm(`Replace ${r.name} with the current workout exercises?`))return;r.items=A.items.map(i=>({exId:i.exId,sets:i.sets.length,types:i.sets.map(s=>s.t||'normal'),...(S.restByEx&&S.restByEx[i.exId]!=null?{rest:S.restByEx[i.exId]}:{})}));r.note=A.note||'';save();toast('Routine updated')},
-  replaceEx(t){const index=+t.dataset.i;openPicker(ids=>{if(ids.length){S.active.items[index].exId=ids[0];save();render()}})},
+  replaceEx(t){const index=+t.dataset.i;openPicker(ids=>{if(ids.length){S.active.items[index].exId=ids[0];save();render()}},true)},
   async finish(){
     const A=S.active,done=A.items.map(it=>({exId:it.exId,sets:it.sets.filter(s=>s.done).map(s=>{const o={w:s.w===''?0:s.w,r:s.r===''?0:s.r};if(s.t&&s.t!=='normal')o.t=s.t;return o})})).filter(it=>it.sets.length);
     if(!done.length){if(await askConfirm('No completed sets. Discard this workout?')){S.active=null;save();render()}return}
@@ -1478,6 +1526,9 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-act]');if(
 document.addEventListener('input',e=>{const t=e.target,f=t.dataset&&t.dataset.f;if(!f)return;
   if(f==='w'||f==='r'){const A=S.active,s=A&&A.items[+t.dataset.i]&&A.items[+t.dataset.i].sets[+t.dataset.s];if(!s)return;
     if(f==='w')s.w=tk(t.value);else{const n=parseInt(t.value,10);s.r=isNaN(n)?'':n}save()}
+  else if(f==='calcw'){ui.calc.t=t.value;$('#calcres').innerHTML=calcResult()}
+  else if(f==='barname')ui.calc.nn=t.value;
+  else if(f==='barw')ui.calc.nw=t.value;
   else if(f==='wname'){S.active.name=t.value;save()}
   else if(f==='workoutNote'){S.active.note=t.value;save()}
   else if(f==='exq'){ui.exq=t.value;$('#exlist').innerHTML=exListHTML()}
@@ -1491,8 +1542,23 @@ document.addEventListener('change',e=>{const t=e.target,f=t.dataset&&t.dataset.f
   else if(f==='statEx'){ui.statEx=t.value;$('#statchart').innerHTML=statChart()}});
 $('#file').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();
   rd.onload=async()=>{try{const d=JSON.parse(rd.result);if(!Array.isArray(d.exercises)||!Array.isArray(d.workouts))throw 0;
-    if(!await askConfirm(`Replace current data with this backup (${d.workouts.length} workouts)?`))return;
-    S=Object.assign(fresh(),d);S.settings=Object.assign({unit:'kg',rest:90},d.settings);S.restByEx=S.restByEx||{};save();render();toast('Backup imported')}catch(err){toast('That is not a valid Workout Tracker backup')}};
+    /* exercise list is protected: an import may only ADD exercises, never remove or alter existing ones */
+    const mine=S.exercises.slice(),byId=new Map(mine.map(e=>[e.id,e])),byKey=new Map(mine.map(e=>[exerciseKey(e.name),e]));
+    const idMap=new Map(),added=[];
+    d.exercises.forEach(x=>{if(!x||!x.id||!x.name)return;
+      const hit=byId.get(x.id)||byKey.get(exerciseKey(x.name));
+      if(hit){idMap.set(x.id,hit.id);return}
+      byId.set(x.id,x);byKey.set(exerciseKey(x.name),x);idMap.set(x.id,x.id);added.push(x)});
+    if(!await askConfirm(`Replace workouts and routines with this backup (${d.workouts.length} workouts)?\nYour exercise list is kept${added.length?` and ${added.length} new exercises will be added`:''}.`))return;
+    const remap=l=>(l||[]).forEach(w=>(w.items||[]).forEach(i=>{if(idMap.has(i.exId))i.exId=idMap.get(i.exId)}));
+    remap(d.workouts);remap(d.routines);if(d.active)remap([d.active]);
+    const myBars=S.bars||[],myBarByEx=S.barByEx||{};
+    S=Object.assign(fresh(),d);S.exercises=[...mine,...added];
+    /* bars are protected too: keep mine, add any new ones from the backup */
+    S.bars=[...myBars,...(Array.isArray(d.bars)?d.bars:[]).filter(b=>b&&b.id&&!myBars.some(m=>m.id===b.id))];if(!S.bars.length)S.bars=defaultBars();
+    const theirs={};Object.entries(d.barByEx||{}).forEach(([k,v])=>theirs[idMap.get(k)||k]=v);
+    S.barByEx=Object.assign(theirs,myBarByEx);
+    S.routines=S.routines||[];S.settings=Object.assign({unit:'kg',rest:90},d.settings);S.restByEx=S.restByEx||{};save();render();toast('Backup imported')}catch(err){toast('That is not a valid Workout Tracker backup')}};
   rd.readAsText(f);e.target.value=''});
 
 /* ---------- Hevy / CSV import ---------- */
@@ -1572,6 +1638,15 @@ $('#csvfile').addEventListener('change',e=>{const f=e.target.files[0];if(!f)retu
 if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
 render();keepAwake();
+/* ---------- Android back button: close the top-most overlay / go to Workout tab, never exit the app ---------- */
+try{history.replaceState({dumbel:0},'');history.pushState({dumbel:1},'');
+window.addEventListener('popstate',()=>{
+  const dlg=$('#dialog');
+  if(dlg&&!dlg.hidden){const c=$('#dialogCancel');if(c)c.click()}
+  else if($('#sheet2').classList.contains('on'))sheet('',2);
+  else if($('#sheet').classList.contains('on')){sheet('');render()}
+  else if(ui.tab!=='workout'){ui.tab='workout';render();window.scrollTo(0,0)}
+  history.pushState({dumbel:1},'')})}catch(e){}
 </script>
 </body>
 </html>
