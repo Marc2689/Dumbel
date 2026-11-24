@@ -56,7 +56,8 @@ nav button span{font-size:20px}nav button.on{color:var(--acc)}
 #sheet,#sheet2{position:fixed;inset:0;z-index:20;display:none}#sheet2{z-index:30}
 #sheet.on,#sheet2.on{display:block}
 .back{position:absolute;inset:0;background:rgba(0,0,0,.6)}
-.panel{position:absolute;left:0;right:0;bottom:0;max-height:90vh;overflow:auto;background:var(--bg);border-radius:18px 18px 0 0;padding:16px 14px calc(20px + var(--safe));max-width:640px;margin:0 auto}
+.stick{position:sticky;top:-16px;z-index:2;background:var(--bg);margin:-16px -14px 0;padding:16px 14px 0}
+.panel{position:absolute;left:0;right:0;bottom:0;max-height:92%;overflow:auto;background:var(--bg);border-radius:18px 18px 0 0;padding:16px 14px calc(20px + var(--safe));max-width:640px;margin:0 auto}
 .chips{display:flex;gap:6px;overflow-x:auto;padding:4px 0 8px}
 .chip{white-space:nowrap;padding:6px 12px;border-radius:99px;font-size:14px;background:var(--card2);color:var(--mut)}
 .chip.on{background:var(--acc);color:#fff}
@@ -598,7 +599,7 @@ function seedExercises(){const out=[];let m='Other';
   return out}
 
 /* ---------- state ---------- */
-const APP_VERSION='27'; /* keep in sync with CACHE in sw.js ('dumbel-v27') */
+const APP_VERSION='29'; /* keep in sync with CACHE in sw.js ('dumbel-v29') */
 const KEY='ironlog.v1'; /* unchanged on purpose so existing saved data keeps loading */
 const defaultBars=()=>[{id:'b_oly',name:'Olympic bar',kg:20,lb:45},{id:'b_wom',name:"Women's bar",kg:15,lb:35},{id:'b_ez',name:'EZ curl bar',kg:10,lb:25},{id:'b_smith',name:'Smith machine bar',kg:15,lb:35},{id:'b_none',name:'No bar / machine',kg:0,lb:0}];
 const fresh=()=>({exercises:seedExercises(),routines:[],workouts:[],active:null,settings:{unit:'kg',rest:90},restByEx:{},bars:defaultBars(),barByEx:{}});
@@ -644,7 +645,7 @@ const lastBackup=()=>{try{return +localStorage.getItem(BK_KEY)||0}catch(e){retur
 const markBackup=()=>{try{localStorage.setItem(BK_KEY,String(Date.now()))}catch(e){}};
 const backupDue=()=>S.workouts.length>0&&Date.now()-lastBackup()>7*864e5;
 const backupLabel=()=>{const t=lastBackup();if(!t)return 'never';const d=Math.floor((Date.now()-t)/864e5);return (d<1?'today':d===1?'yesterday':d+' days ago')+' ('+new Date(t).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})+')'};
-const backupNudge=()=>backupDue()?`<div class="card" style="border-color:var(--bad)"><div class="row-b"><span>⚠️ ${lastBackup()?'Last backup was '+backupLabel()+'.':'You have never backed up.'} Your data only lives on this device.</span></div><button class="btn acc" style="width:100%;margin-top:8px" data-act="shareBackup">Back up now</button></div>`:'';
+const backupNudge=()=>backupDue()?`<div class="card" style="border-color:var(--bad)"><div class="row-b"><span>⚠️ ${lastBackup()?'Last backup was '+backupLabel()+'.':'You have never backed up.'} Your data only lives on this device.</span></div><button class="btn acc" style="width:100%;margin-top:8px" data-act="backupNow">Back up now</button></div>`:'';
 const canFS=!!(window.showSaveFilePicker&&window.indexedDB);
 function idb(){return new Promise((res,rej)=>{const r=indexedDB.open('dumbel-backup',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
 async function idbGet(k){const db=await idb();return new Promise((res,rej)=>{const q=db.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})}
@@ -1945,6 +1946,11 @@ function sheet(html,layer){const el=$(layer===2?'#sheet2':'#sheet');
 
 /* ---------- views ---------- */
 function setCols(type){return type==='wr'?'34px 1fr 66px 56px 36px 22px':'34px 1fr 80px 36px 22px'}
+function recordsLine(ex){if(ex.type!=='wr')return '';
+  const h=exHistory(ex.id);if(!h.length)return '';
+  let bw=0,br=0,b1=0;h.forEach(x=>x.sets.forEach(s=>{if((s.w||0)>bw||((s.w||0)===bw&&(s.r||0)>br)){bw=s.w||0;br=s.r||0}b1=Math.max(b1,e1rm(s.w,s.r))}));
+  if(!bw&&!b1)return '';
+  return `<div class="sm" style="margin:0 0 6px;color:var(--mut)">🏆 Heaviest <b>${dw(bw)} ${U()} × ${br}</b> · Est. 1RM <b>${Math.round(dw(b1))} ${U()}</b></div>`}
 function itemHTML(it,i){
   const ex=exById(it.exId),prev=prevSets(it.exId,S.active.start),t=ex.type;
   const head=t==='wr'?`<span>SET</span><span>PREVIOUS</span><span>${U().toUpperCase()}</span><span>REPS</span><span>✓</span><span></span>`:
@@ -1960,6 +1966,7 @@ function itemHTML(it,i){
       <button class="del" data-act="delSet" data-i="${i}" data-s="${j}">✕</button></div>`}).join('');
   return `<section class="card"><div class="exh"><span class="nm" data-act="exInfo" data-id="${ex.id}">${esc(ex.name)}</span>
     <button data-act="replaceEx" data-i="${i}" title="Replace exercise" aria-label="Replace exercise" style="font-size:12px;white-space:nowrap">⇄ Replace</button><button data-act="moveItem" data-i="${i}" data-d="-1">↑</button><button data-act="moveItem" data-i="${i}" data-d="1">↓</button><button data-act="delItem" data-i="${i}">🗑</button></div>
+    ${recordsLine(ex)}
     ${t==='wr'?`<button class="btn sm" style="width:100%;margin-bottom:6px" data-act="calc" data-i="${i}">⚖ Plate / bar weight calculator</button>`:''}
     ${t==='time'?'':`<div class="row-b exrest"><span class="muted sm">⏱ Rest${S.restByEx&&S.restByEx[ex.id]!=null?'':' (default)'}</span><span><button data-act="exRest" data-id="${ex.id}" data-d="-15">−</button><b style="padding:0 8px;min-width:50px;display:inline-block;text-align:center">${fmtRest(restFor(ex.id))}</b><button data-act="exRest" data-id="${ex.id}" data-d="15">+</button>${S.restByEx&&S.restByEx[ex.id]!=null?`<button data-act="exRestReset" data-id="${ex.id}" title="Use default">↺</button>`:''}</span></div>`}
     <textarea rows="1" data-f="inote" data-i="${i}" placeholder="Exercise notes (e.g. seat 4, slow negatives)" style="margin-bottom:6px">${esc(it.note||'')}</textarea>
@@ -2060,8 +2067,7 @@ function vStats(){
   <label class="lb">Default rest timer (seconds, 0 = off — also adjustable during a workout)</label><input inputmode="numeric" data-f="rest" value="${S.settings.rest}">
   <label class="lb">Your data lives only on this device. Back it up regularly.</label>
   <div class="muted sm" style="margin-bottom:8px">Last backed up: <b>${backupLabel()}</b></div>
-  <button class="btn acc" style="width:100%;margin-bottom:8px" data-act="shareBackup">Back up to Files / Drive / email…</button>
-  ${canFS?(bkName?`<div class="card" style="margin:0 0 8px"><div class="sm">Auto-backup file: <b>${esc(bkName)}</b><br><span class="muted">Rewritten after every saved workout. Android may ask you to allow access once per session.</span></div><div class="grid2" style="margin-top:8px"><button class="btn" data-act="restoreLinked">Restore from it</button><button class="btn" data-act="unlinkBackup">Stop</button></div></div>`:`<button class="btn" style="width:100%;margin-bottom:8px" data-act="linkBackup">Set up auto-backup file</button>`):`<div class="muted sm" style="margin-bottom:8px">Auto-backup to a file isn't supported in this browser — use the button above.</div>`}
+  ${canFS?(bkName?`<div class="card" style="margin:0 0 8px"><div class="sm">Auto-backup file: <b>${esc(bkName)}</b><br><span class="muted">Rewritten after every saved workout. Android may ask you to allow access once per session.</span></div><div class="grid2" style="margin-top:8px"><button class="btn" data-act="restoreLinked">Restore from it</button><button class="btn" data-act="unlinkBackup">Stop</button></div></div>`:`<button class="btn" style="width:100%;margin-bottom:8px" data-act="linkBackup">Set up auto-backup file</button>`):`<div class="muted sm" style="margin-bottom:8px">Auto-backup to a file isn't supported in this browser — use Export backup below.</div>`}
   <div class="grid2"><button class="btn" data-act="exportJson">Export backup</button><button class="btn" data-act="exportCsv">Export CSV</button></div>
   <button class="btn" style="width:100%;margin-top:8px" data-act="importJson">Import backup</button>
   <button class="btn acc" style="width:100%;margin-top:8px" data-act="importCsv">Import workouts from Hevy CSV</button>
@@ -2113,9 +2119,9 @@ function pickerList(){const q=ui.pk.q.trim().toLowerCase();
   return S.exercises.filter(e=>(ui.pk.m==='All'||e.muscle===ui.pk.m)&&(!q||e.name.toLowerCase().includes(q))).sort((a,b)=>a.name.localeCompare(b.name))
     .map(e=>`<div class="li ${ui.pk.sel.has(e.id)?'sel':''}" data-act="pkToggle" data-id="${e.id}"><div><b>${esc(e.name)}</b><div class="muted sm">${esc(e.muscle)}</div></div><span>${ui.pk.sel.has(e.id)?'✓':''}</span></div>`).join('')||'<p class="muted">Nothing found.</p>'}
 function openPicker(cb,single=false){ui.pk={sel:new Set(),q:'',m:'All',cb,single};drawPicker()}
-function drawPicker(){sheet(`<div class="row-b"><h1 style="margin:0">${ui.pk.single?'Replace exercise':'Add exercises'}</h1><button class="btn sm acc" data-act="pkDone">${ui.pk.single?'Replace':`Add (${ui.pk.sel.size})`}</button></div>
+function drawPicker(){sheet(`<div class="stick"><div class="row-b"><h1 style="margin:0">${ui.pk.single?'Replace exercise':'Add exercises'}</h1><button class="btn sm acc" data-act="pkDone">${ui.pk.single?'Replace':`Add (${ui.pk.sel.size})`}</button></div>
   <input data-f="pkq" placeholder="Search" value="${esc(ui.pk.q)}" style="margin-top:10px">
-  <div class="chips">${['All',...MUSCLES].map(m=>`<button class="chip ${ui.pk.m===m?'on':''}" data-act="pkMuscle" data-m="${m}">${m}</button>`).join('')}</div>
+  <div class="chips">${['All',...MUSCLES].map(m=>`<button class="chip ${ui.pk.m===m?'on':''}" data-act="pkMuscle" data-m="${m}">${m}</button>`).join('')}</div></div>
   <div id="pklist">${pickerList()}</div><button class="btn ghost" style="width:100%;margin-top:10px" data-act="newExFromPicker">+ Create custom exercise</button>`,2)}
 
 /* ---------- exercise editor / detail ---------- */
@@ -2182,7 +2188,12 @@ function drawRoutine(){const r=ui.rt;
 
 /* ---------- rest timer / clock ---------- */
 let audio;
-function beep(){try{navigator.vibrate&&navigator.vibrate([200,100,200]);audio=audio||new (window.AudioContext||window.webkitAudioContext)();const o=audio.createOscillator(),g=audio.createGain();o.connect(g);g.connect(audio.destination);o.frequency.value=880;g.gain.value=.15;o.start();o.stop(audio.currentTime+.35)}catch(e){}}
+function audioCtx(){try{audio=audio||new (window.AudioContext||window.webkitAudioContext)();if(audio.state!=='running')audio.resume()}catch(e){}return audio}
+/* three loud square-wave pulses + vibration, so it cuts through music */
+function beep(){try{navigator.vibrate&&navigator.vibrate([250,100,250,100,250]);const a=audioCtx();if(!a)return;const t0=a.currentTime+.02;
+  [0,.28,.56].forEach(d=>{const o=a.createOscillator(),g=a.createGain();o.type='square';o.frequency.value=1000;o.connect(g);g.connect(a.destination);
+    g.gain.setValueAtTime(0,t0+d);g.gain.linearRampToValueAtTime(.7,t0+d+.01);g.gain.setValueAtTime(.7,t0+d+.15);g.gain.linearRampToValueAtTime(0,t0+d+.18);o.start(t0+d);o.stop(t0+d+.2)})}catch(e){}}
+['pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,()=>{if(audio&&audio.state!=='running')audio.resume();else if(!audio)audioCtx()},{passive:true}));
 function fanfare(){try{navigator.vibrate&&navigator.vibrate([100,60,100,60,250]);audio=audio||new (window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume();
   const t0=audio.currentTime+.02;
   [[523.25,0,.14],[659.25,.13,.14],[783.99,.26,.14],[1046.5,.39,.55],[783.99,.39,.55],[1318.5,.39,.55]].forEach(([f,d,l])=>{
@@ -2208,17 +2219,21 @@ function prsFor(w){const out=[],seen=new Set();
     if(nW>oW+1e-9)out.push({exId:it.exId,kind:'weight',v:nW});else if(n1>o1+1e-9)out.push({exId:it.exId,kind:'1rm',v:n1})});
   return out}
 const prText=p=>p.kind==='weight'?`Heaviest set ${dw(p.v)} ${U()}`:`Est. 1RM ≈ ${Math.round(dw(p.v))} ${U()}`;
+let restDoneAt=0;
+function showRestDone(){const r=$('#rest');r.hidden=false;r.classList.add('done');$('#resttime').textContent='Rest over ✓';$('#restfill').style.width='100%'}
 function updateRest(){
   const A=S.active,r=$('#rest');
-  if(!A||!A.restEnd){r.hidden=true;return}
+  if(!A){r.hidden=true;return}
+  if(!A.restEnd){if(restDoneAt&&Date.now()-restDoneAt<5000){showRestDone()}else{r.hidden=true;restDoneAt=0}return}
   const left=A.restEnd-Date.now();
-  if(left<=0){A.restEnd=null;save();r.hidden=true;beep();toast('Rest over — next set!');return}
-  r.hidden=false;const s=Math.ceil(left/1000);
+  if(left<=0){A.restEnd=null;A.restTotal=null;save();restDoneAt=Date.now();beep();toast('Rest over — next set!');showRestDone();return}
+  r.hidden=false;r.classList.remove('done');const s=Math.ceil(left/1000);
   $('#resttime').textContent=`${Math.floor(s/60)}:${pad(s%60)}`;
   $('#restfill').style.width=(100*(1-left/(A.restTotal||left)))+'%'}
 setInterval(()=>{updateRest();const el=$('#elapsed');if(el&&S.active)el.textContent=fmtDur(Date.now()-S.active.start)},1000);
 async function keepAwake(){try{if(S.active&&navigator.wakeLock)await navigator.wakeLock.request('screen')}catch(e){}}
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)keepAwake()});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){keepAwake();updateRest()}});
+window.addEventListener('pageshow',updateRest);window.addEventListener('focus',updateRest);
 
 /* ---------- actions ---------- */
 function startWorkout(items,name){S.active={id:uid(),name:name||workoutName(),note:'',start:Date.now(),items,restEnd:null};save();ui.tab='workout';sheet('');render();keepAwake();window.scrollTo(0,0)}
@@ -2367,20 +2382,9 @@ const ACT={
   /* settings */
   unit(t){S.settings.unit=t.dataset.u;save();render()},
    theme(t){S.settings.theme=t.dataset.v;document.body.classList.toggle('light',t.dataset.v==='light');save();render()},
-  async shareBackup(){
-    const name=backupFileName(),text=backupJson();let why='';
-    if(!navigator.share)why='no share support';
-    else if(!navigator.canShare)why='file sharing unsupported';
-    else{
-      /* try a few shapes: Android/Chrome can refuse some (NotAllowedError); first success wins */
-      const tries=[['text/plain',name,0],['application/json',name,0],['text/plain',name.replace(/\.json$/,'.txt'),0],['text/plain',name,1]];
-      for(const [type,fn,withTitle] of tries){
-        let f;try{f=new File([text],fn,{type})}catch(e){why='File: '+e.name;break}
-        const data=withTitle?{files:[f],title:'Dumbel backup',text:'Dumbel backup'}:{files:[f]};
-        if(!navigator.canShare(data)){why='canShare refused '+type;continue}
-        try{await navigator.share(data);markBackup();render();toast('Backup shared');return}
-        catch(e){if(e&&e.name==='AbortError')return;why=(e&&e.name)+' ('+Math.round(text.length/1024)+' KB, '+type+')'}}}
-    download(name,text,'application/json');markBackup();render();toast('Downloaded instead: '+why)},
+  async backupNow(){
+    if(bkHandle){if(await writeLinked(true)){render();toast('Backed up to '+bkName);return}toast('Could not write to the auto-backup file — downloading instead')}
+    download(backupFileName(),backupJson(),'application/json');markBackup();render()},
   async linkBackup(){
     try{const h=await window.showSaveFilePicker({suggestedName:'dumbel-backup.json',types:[{description:'Dumbel backup',accept:{'application/json':['.json']}}]});
       bkHandle=h;bkName=h.name;await idbSet('handle',h);
@@ -2531,6 +2535,10 @@ render();keepAwake();
 /* lock to portrait where the browser allows it (installed app / fullscreen); the #rot overlay covers the rest */
 const lockPortrait=()=>{try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portrait').catch(()=>{})}catch(e){}};
 lockPortrait();document.addEventListener('click',lockPortrait,{once:true});
+/* keep bottom sheets inside the visible area when the on-screen keyboard opens, so the search box stays at the top */
+(function(){const vv=window.visualViewport;if(!vv)return;
+  const fit=()=>['#sheet','#sheet2'].forEach(q=>{const el=$(q);if(!el)return;el.style.top=vv.offsetTop+'px';el.style.height=vv.height+'px';el.style.bottom='auto'});
+  vv.addEventListener('resize',fit);vv.addEventListener('scroll',fit);fit()})();
 /* ---------- Android back button: close the top-most overlay / go to Workout tab, never exit the app ---------- */
 /* Android Chrome ignores history entries added without a user tap, so the guard entry is (re)added on taps too */
 const guard=()=>{try{if(!(history.state&&history.state.dumbel===1))history.pushState({dumbel:1},'')}catch(e){}};
