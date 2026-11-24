@@ -101,6 +101,8 @@ textarea{background:var(--card2);color:var(--txt);border:1px solid var(--line);b
 @keyframes prbounce{50%{transform:scale(1.15) rotate(-6deg)}}
 @keyframes prfall{to{transform:translateY(110vh) rotate(360deg)}}
 .wed{display:grid;gap:6px;align-items:center;margin:5px 0}
+#rot{display:none}
+@media (orientation:landscape) and (max-height:560px){#rot{position:fixed;inset:0;z-index:999;background:var(--bg);color:var(--txt);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;font-size:18px;text-align:center}#rot span{font-size:48px}}
 </style>
 </head>
 <body>
@@ -117,6 +119,7 @@ textarea{background:var(--card2);color:var(--txt);border:1px solid var(--line);b
 <div id="sheet2"></div>
 <div id="toast"></div>
 <div id="dialog" hidden></div>
+<div id="rot"><span>📱</span>Please rotate your phone to portrait</div>
 <div id="pr" hidden></div>
 <input type="file" id="file" accept="application/json,.json" hidden>
 <input type="file" id="csvfile" accept=".csv,text/csv,text/plain" hidden>
@@ -595,6 +598,7 @@ function seedExercises(){const out=[];let m='Other';
   return out}
 
 /* ---------- state ---------- */
+const APP_VERSION='23'; /* keep in sync with CACHE in sw.js ('dumbel-v23') */
 const KEY='ironlog.v1'; /* unchanged on purpose so existing saved data keeps loading */
 const defaultBars=()=>[{id:'b_oly',name:'Olympic bar',kg:20,lb:45},{id:'b_wom',name:"Women's bar",kg:15,lb:35},{id:'b_ez',name:'EZ curl bar',kg:10,lb:25},{id:'b_smith',name:'Smith machine bar',kg:15,lb:35},{id:'b_none',name:'No bar / machine',kg:0,lb:0}];
 const fresh=()=>({exercises:seedExercises(),routines:[],workouts:[],active:null,settings:{unit:'kg',rest:90},restByEx:{},bars:defaultBars(),barByEx:{}});
@@ -633,6 +637,31 @@ function fixSetTypes(){let ch=false;
 fixSetTypes();
 document.body.classList.toggle('light',S.settings.theme==='light');
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('Could not save — storage full?')}}
+
+/* ---------- backups: auto-file (File System Access API) + share sheet ---------- */
+const BK_KEY='dumbel.lastBackup';
+const lastBackup=()=>{try{return +localStorage.getItem(BK_KEY)||0}catch(e){return 0}};
+const markBackup=()=>{try{localStorage.setItem(BK_KEY,String(Date.now()))}catch(e){}};
+const backupDue=()=>S.workouts.length>0&&Date.now()-lastBackup()>7*864e5;
+const backupLabel=()=>{const t=lastBackup();if(!t)return 'never';const d=Math.floor((Date.now()-t)/864e5);return (d<1?'today':d===1?'yesterday':d+' days ago')+' ('+new Date(t).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})+')'};
+const backupNudge=()=>backupDue()?`<div class="card" style="border-color:var(--bad)"><div class="row-b"><span>⚠️ ${lastBackup()?'Last backup was '+backupLabel()+'.':'You have never backed up.'} Your data only lives on this device.</span></div><button class="btn acc" style="width:100%;margin-top:8px" data-act="shareBackup">Back up now</button></div>`:'';
+const canFS=!!(window.showSaveFilePicker&&window.indexedDB);
+function idb(){return new Promise((res,rej)=>{const r=indexedDB.open('dumbel-backup',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+async function idbGet(k){const db=await idb();return new Promise((res,rej)=>{const q=db.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})}
+async function idbSet(k,v){const db=await idb();return new Promise((res,rej)=>{const tx=db.transaction('kv','readwrite');v==null?tx.objectStore('kv').delete(k):tx.objectStore('kv').put(v,k);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error)})}
+let bkHandle=null,bkName='';
+if(canFS)idbGet('handle').then(h=>{if(h){bkHandle=h;bkName=h.name;if(ui&&ui.tab==='stats')render()}}).catch(()=>{});
+const backupJson=()=>JSON.stringify(S,null,1);
+const backupFileName=()=>`dumbel-backup-${new Date().toISOString().slice(0,10)}.json`;
+/* write to the linked file; needs permission, which can only be re-requested from a tap (so call from a click handler) */
+async function writeLinked(interactive){
+  if(!bkHandle)return false;
+  try{
+    let p=await bkHandle.queryPermission({mode:'readwrite'});
+    if(p!=='granted'&&interactive)p=await bkHandle.requestPermission({mode:'readwrite'});
+    if(p!=='granted')return false;
+    const w=await bkHandle.createWritable();await w.write(backupJson());await w.close();markBackup();return true;
+  }catch(e){return false}}
 /* ---------- how-to instructions (built-in exercises) ---------- */
 const INFOTXT=`@Bench Press (Barbell)
 Lie on the bench with eyes under the bar, feet flat, shoulder blades pinched together and down.
@@ -2020,6 +2049,7 @@ function vStats(){
   const withHist=statExList();if(!ui.statEx||!withHist.find(e=>e.id===ui.statEx))ui.statEx=withHist[0]?withHist[0].id:'';
   const prs=withHist.filter(e=>e.type==='wr').map(e=>{const h=exHistory(e.id);let bw=0,br=0,b1=0,wId=null,wT=0,oId=null,oT=0;h.forEach(x=>x.sets.forEach(s=>{if((s.w||0)>bw){bw=s.w;br=s.r;wId=x.id;wT=x.t}const v=e1rm(s.w,s.r);if(v>b1){b1=v;oId=x.id;oT=x.t}}));return {e,bw,br,b1,wId,wT,oId,oT}}).sort((a,b)=>b.b1-a.b1).slice(0,8);
   return `<h1>Stats</h1>
+  ${backupNudge()}
   <div class="grid2"><div class="kv"><small>This week</small><b>${wk.length} workouts</b></div><div class="kv"><small>Volume this week</small><b>${fmtVol(wk.reduce((a,w)=>a+volumeOf(w.items),0))}</b></div>
   <div class="kv"><small>All-time workouts</small><b>${ws.length}</b></div><div class="kv"><small>All-time volume</small><b>${fmtVol(ws.reduce((a,w)=>a+volumeOf(w.items),0))}</b></div></div>
   <h2>Workouts per week</h2><div class="card">${barChart(vals,labs)}</div>
@@ -2029,11 +2059,14 @@ function vStats(){
   <label class="lb" style="margin-top:0">Appearance</label><div class="seg"><button class="${S.settings.theme!=='light'?'on':''}" data-act="theme" data-v="dark">Dark</button><button class="${S.settings.theme==='light'?'on':''}" data-act="theme" data-v="light">Light</button></div><label class="lb">Units</label><div class="seg"><button class="${U()==='kg'?'on':''}" data-act="unit" data-u="kg">kg</button><button class="${U()==='lb'?'on':''}" data-act="unit" data-u="lb">lb</button></div>
   <label class="lb">Default rest timer (seconds, 0 = off — also adjustable during a workout)</label><input inputmode="numeric" data-f="rest" value="${S.settings.rest}">
   <label class="lb">Your data lives only on this device. Back it up regularly.</label>
+  <div class="muted sm" style="margin-bottom:8px">Last backed up: <b>${backupLabel()}</b></div>
+  <button class="btn acc" style="width:100%;margin-bottom:8px" data-act="shareBackup">Back up to Files / Drive / email…</button>
+  ${canFS?(bkName?`<div class="card" style="margin:0 0 8px"><div class="sm">Auto-backup file: <b>${esc(bkName)}</b><br><span class="muted">Rewritten after every saved workout. Android may ask you to allow access once per session.</span></div><div class="grid2" style="margin-top:8px"><button class="btn" data-act="restoreLinked">Restore from it</button><button class="btn" data-act="unlinkBackup">Stop</button></div></div>`:`<button class="btn" style="width:100%;margin-bottom:8px" data-act="linkBackup">Set up auto-backup file</button>`):`<div class="muted sm" style="margin-bottom:8px">Auto-backup to a file isn't supported in this browser — use the button above.</div>`}
   <div class="grid2"><button class="btn" data-act="exportJson">Export backup</button><button class="btn" data-act="exportCsv">Export CSV</button></div>
   <button class="btn" style="width:100%;margin-top:8px" data-act="importJson">Import backup</button>
   <button class="btn acc" style="width:100%;margin-top:8px" data-act="importCsv">Import workouts from Hevy CSV</button>
   <button class="btn danger" style="width:100%;margin-top:14px" data-act="resetAll">Erase all data</button></div>
-  <p class="muted sm" style="text-align:center">Dumbel · free, offline, no account, no subscription</p>`}
+  <p class="muted sm" style="text-align:center">Dumbel v${APP_VERSION} · free, offline, no account, no subscription</p>`}
 
 const NAV=[['workout','🏋️','Workout'],['routines','📋','Routines'],['exercises','📚','Exercises'],['history','🕘','History'],['stats','📈','Stats']];
 function render(){
@@ -2140,7 +2173,7 @@ function drawWorkoutEdit(){const w=ui.we,d=new Date(w.start),dt=dkey(w.start)+'T
 function drawRoutine(){const r=ui.rt;
   sheet(`<div class="row-b"><h1 style="margin:0">${r.id?'Edit':'New'} routine</h1><button class="btn sm acc" data-act="saveRoutine">Save</button></div>
   <label class="lb">Name</label><input data-f="rtname" value="${esc(r.name)}" placeholder="e.g. Push Day"><label class="lb">Routine notes</label><textarea rows="2" data-f="rtnote" placeholder="Notes for this routine">${esc(r.note||'')}</textarea>
-  ${r.items.map((it,i)=>{const ty=rtTypes(it),has=it.rest!=null,rest=has?it.rest:(+S.settings.rest||0);return `<div class="card"><div class="row-b"><b>${esc(exById(it.exId).name)}</b><button data-act="rtDel" data-i="${i}">🗑</button></div>
+  ${r.items.map((it,i)=>{const ty=rtTypes(it),has=it.rest!=null,rest=has?it.rest:(+S.settings.rest||0);return `<div class="card"><div class="exh"><span class="nm">${esc(exById(it.exId).name)}</span><button data-act="rtReplace" data-i="${i}" title="Replace exercise" aria-label="Replace exercise" style="font-size:12px;white-space:nowrap">⇄ Replace</button><button data-act="rtMove" data-i="${i}" data-d="-1" aria-label="Move up">↑</button><button data-act="rtMove" data-i="${i}" data-d="1" aria-label="Move down">↓</button><button data-act="rtDel" data-i="${i}">🗑</button></div>
     <textarea rows="2" data-f="rtinote" data-i="${i}" placeholder="Notes for this exercise (setup, tempo, cues…)" style="margin-top:8px">${esc(it.note||'')}</textarea>
     <div class="row-b exrest" style="margin-top:8px"><span class="muted sm">⏱ Rest${has?'':' (default)'}</span><span><button data-act="rtRest" data-i="${i}" data-d="-15">−</button><b style="padding:0 8px;min-width:50px;display:inline-block;text-align:center">${fmtRest(rest)}</b><button data-act="rtRest" data-i="${i}" data-d="15">+</button>${has?`<button data-act="rtRestReset" data-i="${i}" title="Use default">↺</button>`:''}</span></div>
     ${ty.map((k,j)=>`<div class="row-b" style="margin:5px 0"><button class="chk t-${k}" style="width:44px;font-weight:700" data-act="rtType" data-i="${i}" data-s="${j}">${k==='normal'?ty.slice(0,j+1).filter(x=>x==='normal').length:STYPES[k][0]}</button><span class="muted sm" style="flex:1">${STYPES[k][1]}</span><button data-act="rtDelSet" data-i="${i}" data-s="${j}">✕</button></div>`).join('')}
@@ -2255,6 +2288,7 @@ const ACT={
       const nW=Math.max(...it.sets.map(s=>s.w||0)),n1=Math.max(...it.sets.map(s=>e1rm(s.w,s.r)));
       if(nW>oW)prs.push(`${ex.name}: heaviest set ${dw(nW)} ${U()}`);else if(n1>o1)prs.push(`${ex.name}: est. 1RM ${Math.round(dw(n1))} ${U()}`)});
     S.workouts.push(w);S.active=null;save();render();if(prs.length)fanfare();
+    if(bkHandle)writeLinked(true).then(ok=>{if(ok){render()}else toast('Auto-backup failed — open Stats to re-link')});
     const nTotal=S.workouts.length,nWeek=S.workouts.filter(x=>x.start>=weekStart(w.start)).length,vol=volumeOf(w.items),allVol=S.workouts.reduce((a,x)=>a+volumeOf(x.items),0);
     sheet(`<h1>Workout complete 🎉</h1><p style="margin:0 0 10px"><b>That's your ${ordinal(nTotal)} workout</b> <span class="muted">· ${ordinal(nWeek)} this week</span></p><div class="stats3"><div><small>Time</small><b>${fmtDur(w.end-w.start)}</b></div><div><small>Volume</small><b>${fmtVol(volumeOf(w.items))}</b></div><div><small>Sets</small><b>${w.items.reduce((a,i)=>a+i.sets.length,0)}</b></div></div>
     ${animalCard(vol,'You lifted')}
@@ -2272,6 +2306,8 @@ const ACT={
   async delRoutine(t){if(await askConfirm('Delete this routine?')){S.routines=S.routines.filter(r=>r.id!==t.dataset.id);save();render()}},
   rtAdd(){openPicker(ids=>{ids.forEach(id=>ui.rt.items.push({exId:id,sets:3}));drawRoutine()})},
   rtDel(t){ui.rt.items.splice(+t.dataset.i,1);drawRoutine()},
+  rtMove(t){const a=ui.rt.items,i=+t.dataset.i,j=i+ +t.dataset.d;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];drawRoutine()},
+  rtReplace(t){const i=+t.dataset.i;openPicker(ids=>{if(ids.length&&ui.rt.items[i]){ui.rt.items[i].exId=ids[0];drawRoutine()}},true)},
   rtSets(t){const it=ui.rt.items[+t.dataset.i],ty=rtTypes(it);if(ty.length<20)ty.push('normal');it.sets=ty.length;drawRoutine()},
   rtDelSet(t){const it=ui.rt.items[+t.dataset.i],ty=rtTypes(it);if(ty.length<2)return toast('A routine exercise needs at least one set');ty.splice(+t.dataset.s,1);it.sets=ty.length;drawRoutine()},
   rtRest(t){const it=ui.rt.items[+t.dataset.i],cur=it.rest!=null?it.rest:(+S.settings.rest||0);it.rest=Math.max(0,Math.min(900,cur+ +t.dataset.d));drawRoutine()},
@@ -2331,7 +2367,22 @@ const ACT={
   /* settings */
   unit(t){S.settings.unit=t.dataset.u;save();render()},
    theme(t){S.settings.theme=t.dataset.v;document.body.classList.toggle('light',t.dataset.v==='light');save();render()},
-  exportJson(){download(`workout-tracker-backup-${new Date().toISOString().slice(0,10)}.json`,JSON.stringify(S,null,1),'application/json')},
+  async shareBackup(){
+    const name=backupFileName(),text=backupJson();
+    try{const f=new File([text],name,{type:'application/json'});
+      if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Dumbel backup'});markBackup();render();toast('Backup shared');return}}
+    catch(e){if(e&&e.name==='AbortError')return}
+    download(name,text,'application/json');markBackup();render();toast('Backup downloaded')},
+  async linkBackup(){
+    try{const h=await window.showSaveFilePicker({suggestedName:'dumbel-backup.json',types:[{description:'Dumbel backup',accept:{'application/json':['.json']}}]});
+      bkHandle=h;bkName=h.name;await idbSet('handle',h);
+      if(await writeLinked(true)){toast('Auto-backup on')}else toast('File chosen, but could not write to it');render()}
+    catch(e){if(!e||e.name!=='AbortError')toast('Could not set up auto-backup')}},
+  async unlinkBackup(){bkHandle=null;bkName='';try{await idbSet('handle',null)}catch(e){}render();toast('Auto-backup off')},
+  async restoreLinked(){
+    try{if(await bkHandle.requestPermission({mode:'read'})!=='granted')return toast('Permission denied');
+      const f=await bkHandle.getFile();await importText(await f.text())}catch(e){toast('Could not read the backup file')}},
+  exportJson(){markBackup();download(`workout-tracker-backup-${new Date().toISOString().slice(0,10)}.json`,JSON.stringify(S,null,1),'application/json')},
   exportCsv(){const rows=[['date','workout','exercise','set','weight_kg','reps_or_seconds']];
     chrono().forEach(w=>w.items.forEach(it=>it.sets.forEach((s,j)=>rows.push([new Date(w.start).toISOString(),w.name,exById(it.exId).name,j+1,s.w||0,s.r||0]))));
     download('workout-tracker-workouts.csv',rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n'),'text/csv')},
@@ -2371,8 +2422,8 @@ document.addEventListener('input',e=>{const t=e.target,f=t.dataset&&t.dataset.f;
 document.addEventListener('change',e=>{const t=e.target,f=t.dataset&&t.dataset.f;if(!f)return;
   if(f==='exmuscle')ui.ex.muscle=t.value;else if(f==='extype')ui.ex.type=t.value;
   else if(f==='statEx'){ui.statEx=t.value;$('#statchart').innerHTML=statChart()}});
-$('#file').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();
-  rd.onload=async()=>{try{const d=JSON.parse(rd.result);if(!Array.isArray(d.exercises)||!Array.isArray(d.workouts))throw 0;
+async function importText(txt){
+  {try{const d=JSON.parse(txt);if(!Array.isArray(d.exercises)||!Array.isArray(d.workouts))throw 0;
     /* exercise list is protected: an import may only ADD exercises, never remove or alter existing ones */
     const mine=S.exercises.slice(),byId=new Map(mine.map(e=>[e.id,e])),byKey=new Map(mine.map(e=>[exerciseKey(e.name),e]));
     const idMap=new Map(),added=[];
@@ -2389,8 +2440,8 @@ $('#file').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;
     S.bars=[...myBars,...(Array.isArray(d.bars)?d.bars:[]).filter(b=>b&&b.id&&!myBars.some(m=>m.id===b.id))];if(!S.bars.length)S.bars=defaultBars();
     const theirs={};Object.entries(d.barByEx||{}).forEach(([k,v])=>theirs[idMap.get(k)||k]=v);
     S.barByEx=Object.assign(theirs,myBarByEx);
-    S.routines=S.routines||[];S.settings=Object.assign({unit:'kg',rest:90},d.settings);S.restByEx=S.restByEx||{};fixSetTypes();save();render();toast('Backup imported')}catch(err){toast('That is not a valid Workout Tracker backup')}};
-  rd.readAsText(f);e.target.value=''});
+    S.routines=S.routines||[];S.settings=Object.assign({unit:'kg',rest:90},d.settings);S.restByEx=S.restByEx||{};fixSetTypes();save();render();toast('Backup imported')}catch(err){toast('That is not a valid Workout Tracker backup')}}}
+$('#file').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>importText(rd.result);rd.readAsText(f);e.target.value=''});
 
 /* ---------- Hevy / CSV import ---------- */
 function parseCSV(t){const rows=[];let r=[],c='',q=false;
@@ -2469,6 +2520,9 @@ $('#csvfile').addEventListener('change',e=>{const f=e.target.files[0];if(!f)retu
 if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
 render();keepAwake();
+/* lock to portrait where the browser allows it (installed app / fullscreen); the #rot overlay covers the rest */
+const lockPortrait=()=>{try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portrait').catch(()=>{})}catch(e){}};
+lockPortrait();document.addEventListener('click',lockPortrait,{once:true});
 /* ---------- Android back button: close the top-most overlay / go to Workout tab, never exit the app ---------- */
 /* Android Chrome ignores history entries added without a user tap, so the guard entry is (re)added on taps too */
 const guard=()=>{try{if(!(history.state&&history.state.dumbel===1))history.pushState({dumbel:1},'')}catch(e){}};
