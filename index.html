@@ -598,7 +598,7 @@ function seedExercises(){const out=[];let m='Other';
   return out}
 
 /* ---------- state ---------- */
-const APP_VERSION='23'; /* keep in sync with CACHE in sw.js ('dumbel-v23') */
+const APP_VERSION='24'; /* keep in sync with CACHE in sw.js ('dumbel-v24') */
 const KEY='ironlog.v1'; /* unchanged on purpose so existing saved data keeps loading */
 const defaultBars=()=>[{id:'b_oly',name:'Olympic bar',kg:20,lb:45},{id:'b_wom',name:"Women's bar",kg:15,lb:35},{id:'b_ez',name:'EZ curl bar',kg:10,lb:25},{id:'b_smith',name:'Smith machine bar',kg:15,lb:35},{id:'b_none',name:'No bar / machine',kg:0,lb:0}];
 const fresh=()=>({exercises:seedExercises(),routines:[],workouts:[],active:null,settings:{unit:'kg',rest:90},restByEx:{},bars:defaultBars(),barByEx:{}});
@@ -2369,8 +2369,9 @@ const ACT={
    theme(t){S.settings.theme=t.dataset.v;document.body.classList.toggle('light',t.dataset.v==='light');save();render()},
   async shareBackup(){
     const name=backupFileName(),text=backupJson();
-    try{const f=new File([text],name,{type:'application/json'});
-      if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Dumbel backup'});markBackup();render();toast('Backup shared');return}}
+    try{/* Chrome only lets some MIME types through the share sheet; text/plain works and the .json name is kept */
+      for(const type of ['text/plain','application/json']){const f=new File([text],name,{type});
+        if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Dumbel backup'});markBackup();render();toast('Backup shared');return}}}
     catch(e){if(e&&e.name==='AbortError')return}
     download(name,text,'application/json');markBackup();render();toast('Backup downloaded')},
   async linkBackup(){
