@@ -598,7 +598,7 @@ function seedExercises(){const out=[];let m='Other';
   return out}
 
 /* ---------- state ---------- */
-const APP_VERSION='26'; /* keep in sync with CACHE in sw.js ('dumbel-v26') */
+const APP_VERSION='27'; /* keep in sync with CACHE in sw.js ('dumbel-v27') */
 const KEY='ironlog.v1'; /* unchanged on purpose so existing saved data keeps loading */
 const defaultBars=()=>[{id:'b_oly',name:'Olympic bar',kg:20,lb:45},{id:'b_wom',name:"Women's bar",kg:15,lb:35},{id:'b_ez',name:'EZ curl bar',kg:10,lb:25},{id:'b_smith',name:'Smith machine bar',kg:15,lb:35},{id:'b_none',name:'No bar / machine',kg:0,lb:0}];
 const fresh=()=>({exercises:seedExercises(),routines:[],workouts:[],active:null,settings:{unit:'kg',rest:90},restByEx:{},bars:defaultBars(),barByEx:{}});
